@@ -7,6 +7,8 @@ from scipy.optimize import curve_fit
 
 plt.rcParams.update({'font.size': 26})
 
+path = 'C:/Users/mathimyh/master/master-boris/'
+
 def plot_something(filename):
 
     f = open(filename, 'r')
@@ -586,9 +588,9 @@ def plot_tAvg_comparison(plots, legends, savename, ani):
         #     xs = np.linspace(2.02, 2.5, len(ys))
 
         # If large temperatures we have to adjust for background noise
-        # if k > 0:
-        #     background = 4*sum([y for y in ys[3*int(len(ys)/4):]]) / len(ys)
-        #     ys = [y - background for y in ys]
+        if k > 0:
+            background = 4*sum([y for y in ys[3*int(len(ys)/4):]]) / len(ys)
+            ys = [y - background for y in ys]
 
         leg = round(ys[0] * 1e-11, 1)
 
@@ -598,28 +600,36 @@ def plot_tAvg_comparison(plots, legends, savename, ani):
 
         
 
-        # plt.plot(xs, ys, label=legends[k], linewidth=3, color=colors[k])
-        plt.plot(xs, ys, label=str(leg), linewidth=3, color=colors[k])
+        plt.plot(xs, ys, label=legends[k], linewidth=3, color=colors[k])
+        # plt.plot(xs, ys, label=str(leg), linewidth=3, color=colors[k])
 
         indexer += 1
 
     plt.xlabel('x (μm)')
     plt.ylabel(r'$\mu$ (normalized)')
 
-    plt.legend(title= r'$\mu$ value underneath injector ($10^{11}$)')
+    # plt.legend(title= r'$\mu$ value underneath injector ($10^{11}$)')
+    plt.legend(title='Temperature (K)')
 
     plt.savefig(savename, dpi=600)
     plt.show()
 
-def plot_magnon_dispersion(meshdims, damping, MEC, ani, dir, axis):
+def plot_magnon_dispersion(meshdims, cellsize, t, V, damping, MEC, ani, T, type, dir, axis, transport = False):
 
-    mec_folder = ''
+    modules_folder = 'ex+ani'
     if MEC:
-        mec_folder = 'MEC/'
+        modules_folder += 'mec'
+    modules_folder += '/'
 
     time_step = 0.1e-12
 
-    output_file = 'C:/Users/mathimyh/documents/boris data/simulations/boris_fordypningsoppgave/' + ani + '/cache/' + mec_folder + 'dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/dir' + dir + '_axis' + axis + '_dispersion.txt'
+
+    if transport:
+        output_file = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'V' + str(V) + '_damping' + str(damping) + '_T' + str(T) +  '_dispersion.txt'
+        savename = type + '/' + modules_folder + ani + '/plots/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'V' + str(V) + '_damping' + str(damping) + '_T' + str(T) +  '_dispersion.png'
+    else:
+        output_file = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'groundstate' + '_damping' + str(damping) + '_T' + str(T) +  '_dispersion.txt'
+        savename = type + '/' + modules_folder + ani + '/plots/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'groundstate' + '_damping' + str(damping) + '_T' + str(T) +  '_dispersion.png'
 
     pos_time = np.loadtxt(output_file)
 
@@ -639,7 +649,7 @@ def plot_magnon_dispersion(meshdims, damping, MEC, ani, dir, axis):
 
     fig1,ax1 = plt.subplots()
 
-    ax1.imshow(result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, 100))
+    ax1.imshow(result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, 400))
 
     label = 'q' + dir
 
@@ -649,11 +659,10 @@ def plot_magnon_dispersion(meshdims, damping, MEC, ani, dir, axis):
 
     plt.tight_layout()
 
-    folder_name = ani + '/plots/' + mec_folder + 'dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
+    folder_name = type + '/' + modules_folder + ani + '/plots/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
     if not os.path.exists(folder_name):
         os.makedirs(folder_name)
 
-    savename = ani + '/plots/' + mec_folder + 'dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/damping' + str(damping) + 'dir' + dir + '_axis' + axis + '_magnon_dispersion.png'
 
     plt.savefig(savename, dpi=600)
 
@@ -746,19 +755,19 @@ def plot_dispersions(plots, savename):
         dim1 = 1
         dim2 = 2
 
-    elif len(plots) == 5:
+    elif len(plots) == 3:
         dim1 = 1
-        dim2 = 5
+        dim2 = 3
 
 
-    fig, axs = plt.subplots(dim1, dim2, sharey=False)
+    fig, axs = plt.subplots(dim1, dim2, sharey=True)
 
     fig.set_figheight(5)
-    fig.set_figwidth(12)
+    fig.set_figwidth(14)
 
     annotations = ['a', 'b', 'c', 'd']
     # titles = ['1 layer', '50 layers', '100 layers', '150 layers', '150 layers \n + damping layer']
-    titles = ['20 layers', '25 layers']
+    titles = [r'$\mu_0$ = 5.0 $\cdot 10^{11}$', r'$\mu_0$ = 14.8 $\cdot 10^{11}$', r'$\mu_0$ = 29.6 $\cdot 10^{11}$']
 
     for i, ax in enumerate(list((axs))):
 
@@ -781,9 +790,9 @@ def plot_dispersions(plots, savename):
 
         result = [fourier_data[i] for i in range(int(0.5 *freq_len),freq_len)]
 
-        clim_max = 500
-        if i == 0:
-            clim_max = 1000
+        clim_max = 1000
+        # if i == 0:
+        #     clim_max = 1000
 
         label = 'qy'
 
@@ -799,8 +808,8 @@ def plot_dispersions(plots, savename):
         ax.title.set_text(titles[i])
         # ax.set_xticks([-2,2])
         ax.set_xlabel(label)
-        # if i == 0:
-        ax.set_ylabel('f (THz)')
+        if i == 0:
+            ax.set_ylabel('f (THz)')
     # ax1.set_ylim(0, 0.1)
 
     fig.tight_layout()
@@ -864,35 +873,44 @@ def plot_trajectory(meshdims, damping, MEC, ani, dir):
     plt.savefig(savename, dpi=600)
     plt.show()
 
-def plot_neel_T(meshdims, damping, MEC, ani):
+def plot_critical_T(meshdims, damping, MEC, ani, type):
 
     plt.figure(figsize=(10,6))
 
-    mec_folder = ''
+    modules_folder = 'ex+ani'
     if MEC:
-        mec_folder = 'MEC/'
+        modules_folder += 'mec'
+    modules_folder += '/'
 
-    output_file = 'C:/Users/mathimyh/documents/boris data/simulations/boris_fordypningsoppgave/' + ani + '/cache/' + mec_folder + 'neel/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/neel_T.txt'
+    output_file = path + type + '/' + modules_folder + ani + '/cache/critical_T/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/critical_T.txt'
 
     f = open(output_file, 'r')
 
-    lines = f.readlines()[9:-1]
+    lines = f.readlines()
 
     xs = []
     ys = []
+    
 
-    for line in lines:
-        vals = line.strip().split('\t')
-        xs.append(float(vals[0])*1e12)
-        ys.append(float(vals[1]))
+    for i, line in enumerate(lines):
+        temp = line[1:-2]
+        vals = temp.strip().split(', ')
+        T = int(vals[0])
+        m = float(vals[1])
+        xs.append(T)
+        ys.append(m)
+        
+
+    max_y = max(ys)
+    ys = [y/max_y for y in ys]
 
     plt.plot(xs, ys, linewidth=3)
 
-    folder_name = ani + '/plots/' + mec_folder + 'neel/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
+    folder_name = type + '/' + modules_folder + ani + '/plots/critical_T/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
     if not os.path.exists(folder_name):
         os.makedirs(folder_name)
 
-    savename = ani + '/plots/' + mec_folder + 'neel/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/damping' + str(damping) + '_' + 'neel_T.png'
+    savename = type + '/' + modules_folder + ani + '/plots/critical_T/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/critical_T.png'
     plt.xlabel(r'Temperature ($K$)')
     plt.ylabel(r'${m}_{x}$')
     plt.tight_layout()
@@ -1003,32 +1021,32 @@ def main():
 
     # # # # # # title = 'Normalized spin accumulation with/without MEC'
 
-    f2 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x5/tAvg_damping0.0004_V-0.02_0.3K.txt'
-    f1 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x5/tAvg_damping0.0004_V-0.0115_0.3K.txt'
-    f3 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x5/tAvg_damping0.0004_V-0.04_0.3K.txt'
+    # f1 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x25/tAvg_damping0.0004_V-0.4_0.3K.txt'
+    # f2 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x25/tAvg_damping0.0004_V-0.5_5K.txt'
+    # f3 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x5/tAvg_damping0.0004_V-0.04_0.3K.txt'
 
-    l1 = 'high'
-    l2 = 'low'
-    l3 = '5'
+    # l1 = '0.3'
+    # l2 = '5'
+    # l3 = '5'
 
-    savename = 'AFM/ex+ani/IP/plots/custom/1layer_torque_comparison.png'
+    # savename = 'AFM/ex+ani/IP/plots/custom/5layer_temp_comparison.png'
 
-    plot_tAvg_comparison([f1,f2,f3], [l1,l2], savename, 'IP')
+    # plot_tAvg_comparison([f1,f2], [l1,l2], savename, 'IP')
 
     # plot_dispersion([4000, 50, 5], 4e-4, 1, 'OOP', 'y')
 
     # # # FOR DISPERSIONS DOWN HERE
 
-    # f1 = 'IP/cache/dispersions/4000x50x20/steady/diry_axisx_dispersion.txt'
-    # f2 = 'IP/cache/dispersions/4000x50x25/steady/diry_axisx_dispersion.txt'
-    # # f3 = 'IP/cache/dispersions/1000x50x100/steady/diry_axisx_dispersion.txt'
-    # # f4 = 'IP/cache/dispersions/1000x50x150/steady/diry_axisx_dispersion.txt'
-    # # f5 = 'IP/cache/dispersions/1000x50x190/steady/diry_axisx_dispersion.txt'
+    f1 = 'AFM/ex+ani/IP/cache/dispersions/4000x50x5/diry_axisxV-0.0115_damping0.0004_T0.3_dispersion.txt'
+    f2 = 'AFM/ex+ani/IP/cache/dispersions/4000x50x5/diry_axisxV-0.02_damping0.0004_T0.3_dispersion.txt'
+    f3 = 'AFM/ex+ani/IP/cache/dispersions/4000x50x5/diry_axisxV-0.04_damping0.0004_T0.3_dispersion.txt'
+    # f4 = 'IP/cache/dispersions/1000x50x150/steady/diry_axisx_dispersion.txt'
+    # f5 = 'IP/cache/dispersions/1000x50x190/steady/diry_axisx_dispersion.txt'
 
 
-    # savename = 'IP/plots/dispersions/finished/steady_20vs25layers_dispersion.png'
+    savename = 'AFM/ex+ani/IP/plots/custom/1layer_dispersion_torque_comparison_0.3K.png'
 
-    # plot_dispersions((f1,f2), savename)
+    plot_dispersions((f1,f2,f3), savename)
 
     # ### DIFFUSION LENGTHS DOWN HERE
 
