@@ -16,7 +16,7 @@ def Init_AFM(meshdims, cellsize, damping, MEC, ani, T):
 
     ns = NSClient(); ns.configure(True, False)
     ns.cuda(1)
-    ns.selectcudadevice([0,1])
+    # ns.selectcudadevice([0,1])
     ns.reset()
     
     modules = ['exchange', 'aniuni']
@@ -74,6 +74,67 @@ def Init_AFM(meshdims, cellsize, damping, MEC, ani, T):
     # Return the mesh, ready for simulations
     return AFM
 
+# Initializes a FM mesh with same parameters as AFM. Returns the mesh
+def Init_FM(meshdims, cellsize, damping, MEC, ani, T):
+    
+    ns = NSClient(); ns.configure(True, False)
+    ns.cuda(1)
+    # ns.selectcudadevice([0,1])
+    ns.reset()
+    
+    modules = ['exchange', 'aniuni']
+    if MEC:
+        modules.append('melastic')
+
+    # Set up the antiferromagnet
+    FM = ns.Ferromagnet(np.array(meshdims)*1e-9, [cellsize*1e-9])
+    FM.modules(modules)
+    temp = str(T) + 'K'
+    ns.temperature(temp)
+    ns.setode('sLLG', 'RK4') # Stochastic LLG for temperature effects
+    ns.setdt(1e-15) # 1fs is good time step
+
+    # Set parameters. Should possibly just save these in the database really    
+    FM.param.grel = 1
+    FM.param.damping =  damping
+    FM.param.Ms = 2.1e3
+    FM.param.Nxy = 0
+    FM.param.A = 76e-15 # J/m
+    FM.param.J1 = 0
+    FM.param.J2 = 0
+    FM.param.K1 = 21 # J/m^3
+    FM.param.K2 = 0
+    FM.param.K3 = 0
+    FM.param.cHa = 1
+    # Different anisotropies
+    if ani == 'OOP':
+        FM.param.ea1 = (0,0,1) # Set it z-direction
+        FM.setangle(0,90) # Just move m to z-direction, not necessary to wait every time
+    elif ani == 'IP':
+        FM.param.ea1 = (1,0,0)
+    else:
+        print('Choose anisotropy direction')
+        exit()
+
+    # Add increased damping at edges along x-axis to prevent reflections
+    FM.param.damping.setparamvar('abl_tanh', [300/meshdims[0], 300/meshdims[0], 0, 0, 0, 0, 1, 10, 300]) 
+    
+    # Add the magnetoelastic parameters if necessary
+    if MEC:
+        FM.surfacefix('-z')
+        FM.seteldt(1e-15)
+        FM.mcellsize([cellsize*1e-9]) 
+        FM.param.cC = (36e10, 17e10, 8.86e10) # N/m^2       A. Yu. Lebedev et al (1989)
+        FM.param.density = 5250 #kg/m^3       found this on google
+        FM.param.MEc = (-3.44e6, 7.5e6) #J/m^3  (Original B2 = 7.5e6)   G. Wedler et al (1999) 
+        FM.param.mdamping = 1e15 # Should probably be lower than this 
+
+    # Relax for 1 ps to get some fluctuations
+    ns.Relax(['time', 1e-12])
+
+    # Return the mesh, ready for simulations
+    return FM
+
 # Sets up a simulation with a virtual current
 def virtual_current(meshdims, cellsize, damping, MEC, ani, T, type):
 
@@ -83,7 +144,10 @@ def virtual_current(meshdims, cellsize, damping, MEC, ani, T, type):
     if type == 'AFM':
         M = Init_AFM(meshdims, cellsize, damping, MEC, ani, T)
     elif type == 'FM':
-        M = 0
+        M = Init_FM(meshdims, cellsize, damping, MEC, ani, T)
+    else:
+        print('Choose type!')
+        exit()
 
     # Add the transport modules
     modules = ['exchange', 'aniuni', 'SOTfield', 'transport']
@@ -156,8 +220,6 @@ def save_steadystate(meshdims, cellsize, t, V, damping, MEC, ani, T, type, x_val
 
     # Run the simulation while also saving <mxdmdt> at x_vals every 5ps
     if x_vals != False:
-        
-        x_vals_string = 'nm_'.join(str(x_val) for x_val in x_vals)
 
         filename = 'C:/Users/mathimyh/master/master-boris/' + type + '/' + modules_folder + ani + '/cache/plateau/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/plateau_V'  + str(V) + '_damping' + str(damping) + '_' + str(T) + 'K.txt'
         
