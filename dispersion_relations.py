@@ -12,7 +12,7 @@ import transport
 
 path = 'C:/Users/mathimyh/master/master-boris/'
 
-def magnon_dispersion(meshdims, cellsize, t, V, damping, MEC, ani, T, type, dir, axis, transport = False):
+def magnon_dispersion(meshdims, cellsize, t, V, damping, MEC, ani, T, type, dir, axis, steadystate = False):
 
     ns = NSClient(); ns.configure(True, False)
 
@@ -42,7 +42,7 @@ def magnon_dispersion(meshdims, cellsize, t, V, damping, MEC, ani, T, type, dir,
 
     Ms = 2.1e3
     
-    if transport:
+    if steadystate:
         sim_name = path + type + '/' + modules_folder + ani + '/sims/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/V' + str(V) + '_damping' + str(damping) + '_' + str(T) + 'K_steady_state.bsm'
         ns.loadsim(sim_name)
         output_file = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'V' + str(V) + '_damping' + str(damping) + '_T' + str(T) +  '_dispersion.txt'
@@ -65,7 +65,7 @@ def magnon_dispersion(meshdims, cellsize, t, V, damping, MEC, ani, T, type, dir,
 
     while time < total_time:
         
-        if transport:
+        if steadystate:
             ns.V([0.001*V, 'time', time + time_step])
         else:
             ns.Relax(['time', time + time_step])
@@ -78,7 +78,7 @@ def magnon_dispersion(meshdims, cellsize, t, V, damping, MEC, ani, T, type, dir,
         ns.dp_saveappendasrow(output_file, int_dir)
         time += time_step
 
-    plotting.plot_magnon_dispersion(meshdims, cellsize, t, V, damping, MEC, ani, T, type, dir, axis, transport)
+    plotting.plot_magnon_dispersion(meshdims, cellsize, t, V, damping, MEC, ani, T, type, dir, axis, steadystate)
 
 
 def phonon_dispersion(meshdims, cellsize, t, damping, x_start, x_stop, MEC, ani, dir):
@@ -217,10 +217,10 @@ def critical_T(meshdims, cellsize, t, damping, MEC, ani, type, max_T):
     ns.reset()
     ns.iterupdate(200)
 
-    # Okay so both a temperature increase and a time average over each temperature
-    ns.setdata('<T>', type, np.array([0,0,0,meshdims[0],meshdims[1],meshdims[2]])*1e-9)
-    ns.adddata('<M2>', type, np.array([0,0,0,meshdims[0],meshdims[1],meshdims[2]])*1e-9) # average magnetization of whole mesh (M2 because I want positive values)
-    ns.editdatasave(0, 'time', (t*1e-12)/500) # 10 times for each step, then average over these
+    # # Okay so both a temperature increase and a time average over each temperature
+    # ns.setdata('<T>', type, np.array([0,0,0,meshdims[0],meshdims[1],meshdims[2]])*1e-9)
+    # ns.adddata('<M2>', type, np.array([0,0,0,meshdims[0],meshdims[1],meshdims[2]])*1e-9) # average magnetization of whole mesh (M2 because I want positive values)
+    # ns.editdatasave(0, 'time', (t*1e-12)/500) # 10 times for each step, then average over these
 
     output_file = path + type + '/' + modules_folder + ani + '/cache/critical_T/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/critical_T.txt'
 
@@ -231,14 +231,14 @@ def critical_T(meshdims, cellsize, t, damping, MEC, ani, type, max_T):
     # Increase temperature over time 
     for i in range(max_T):
         ns.temperature(i)
-        ns.Relax(['time', 20e-12])
+        ns.Relax(['time', 40e-12])
         m = [0,0,0]
         for j in range(avs):
             temp = ns.showdata('<M2>', type, np.array([0,0,0,meshdims[0],meshdims[1],meshdims[2]])*1e-9)
             m[0] += temp[0]
             m[1] += temp[1]
             m[2] += temp[2]
-            ns.Relax(['time', 5e-12])
+            ns.Relax(['time', 10e-12])
             ns.reset()
         m[0] /= avs
         m[1] /= avs
