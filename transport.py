@@ -248,6 +248,37 @@ def save_steadystate(meshdims, cellsize, t, V, damping, MEC, ani, T, type, x_val
         ns.V([0.001*V, 'time', t*1e-12])
         ns.savesim(savename)
 
+# Run transport simulation and save current density over time (all 3 components)
+def current_density(meshdims, cellsize, t, V, damping, MEC, ani, T, type):
+    # Folder system
+    modules_folder = 'ex+ani'
+    if MEC:
+        modules_folder += '+mec'
+    modules_folder += '/'
+
+    ns = NSClient(); ns.configure(True, False)
+    ns.reset()
+
+    M = virtual_current(meshdims, cellsize, damping, MEC, ani, T, type)
+    ns.iterupdate(200)
+
+    filename = 'C:/Users/mathimyh/master/master-boris/' + type + '/' + modules_folder + ani + '/cache/current_density/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/Jc'  + str(V) + '_damping' + str(damping) + '_' + str(T) + 'K.txt'
+    
+    folder_name = type + '/' + modules_folder + ani + '/cache/current_density/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
+    if not os.path.exists(folder_name):
+        os.makedirs(folder_name)
+
+    # See if there is difference in spin current within the injector. Shouldnt be
+    one = np.array([meshdims[0]/2 - 20, 0, meshdims[2], meshdims[0]-20, meshdims[1], meshdims[2]])*1e-9
+    two = np.array([meshdims[0]/2 - 20, 0, meshdims[2], meshdims[0]-20, meshdims[1], meshdims[2]])*1e-9
+    three = np.array([meshdims[0]/2 - 20, 0, meshdims[2], meshdims[0]-20, meshdims[1], meshdims[2]])*1e-9
+        
+    ns.setsavedata(filename, ['<Jc>', M, one], ['<Jc>', M, two], ['<Jc>', M, three])
+
+    ns.V([0.001*V, 'time', t*1e-12, 'time', 1e-12])
+
+    # plotting.plot_current_density(meshdims, cellsize, t, V, damping, MEC, ani, T, type)
+    
 # Loads a simulation in steady state, runs the simulation and saves time and <mxdmdt> along the x-axis
 def time_avg_SA(meshdims, cellsize, t, V, damping, MEC, ani, T, type, x_start, x_stop):
 
