@@ -251,7 +251,114 @@ def plot_tAvg_SA(meshdims, cellsize, t, V, damping, MEC, ani, T, type, x_start, 
 
     plotname = type + '/' + modules_folder + ani + '/plots/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/tAvg_damping' + str(damping) + '_V' + str(V) + '_' + str(T) + 'K.png'
     plt.savefig(plotname, dpi=600)
-    plt.show()
+    # plt.show()
+
+def plot_tAvg_SA_underneath(meshdims, cellsize, t, V, damping, MEC, ani, T, type, x_start, x_stop):
+
+    plt.figure(figsize=(10, 7))
+
+    modules_folder = 'ex+ani'
+    if MEC:
+        modules_folder += '+mec'
+    modules_folder += '/'
+
+    folder_name = type + '/' + modules_folder + ani + '/underneath/plots/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
+    if not os.path.exists(folder_name):
+        os.makedirs(folder_name)
+
+    filename = type + '/' + modules_folder + ani + '/underneath/cache/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/tAvg_damping' + str(damping) + '_V' + str(V) + '_' + str(T) + 'K.txt'
+    filename_2D = type + '/' + modules_folder + ani + '/cache/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/2D_tAvg_damping' + str(damping) + '_V' + str(V) + '_' + str(T) + 'K.txt'
+
+    if os.path.isfile(filename):
+        f = open(filename, 'r')
+
+        lines = f.readlines()
+        lines = lines[10:]
+
+        xs = np.linspace(x_start/1000, x_stop/1000, int((x_stop - x_start)/cellsize))
+
+        vals = []
+
+
+        for line in lines:
+            # This is the component we look at. In plane means x-component (0) and out-of-plane means z (2)
+            direction = 0
+            if ani == 'OOP':
+                direction = 2
+            vec = line.split('\t')
+            all_vals = vec[1:]
+            temp = []
+            while direction < len(all_vals):
+                temp.append(float(all_vals[direction]))
+                direction += 3
+            vals.append(temp)
+
+
+        ys = []
+
+        for i in range(len(vals[0])):
+            val = 0
+            for j in range(len(vals)):
+                val += float(vals[j][i])
+            val /= len(vals)
+            ys.append(val)
+
+    elif os.path.isfile(filename_2D):
+        f = open(filename_2D, 'r')
+
+        lines = f.readlines()
+        lines = lines[10:]
+
+        # Turn the raw data into a list of numpy arrays. Every entry in the arrays are floats.
+        raw_data = []
+        for line in lines:
+
+            # Make a list of all entries and an empty array to fill only the component we want in
+            vec = line.strip().split('\t')[1:]
+            temp = np.empty(int(len(vec)/3))
+
+            # This is the component we look at. In plane means x-component (0) and out-of-plane means z (2)
+            direction = 0
+            if ani == 'OOP':
+                direction = 2
+
+            # Iterate over all and add only the component we want. Convert to float
+            indexer = 0
+            while direction < len(vec):
+                temp[indexer] = float(vec[direction])
+                indexer += 1
+                direction += 3
+
+            # Reshape to 2D array and add to the data list
+            raw_data.append(temp.reshape(meshdims[2], int(len(temp)/(meshdims[2]))))
+
+        # Now find the time averages for all the data
+        tAvg_data = np.zeros_like(raw_data[0])
+
+        for k, matrix in enumerate(raw_data):
+            for i, row in enumerate(matrix):
+                for j, col in enumerate(row):
+                    tAvg_data[i][j] += col
+                    if k == len(raw_data)-1:
+                        tAvg_data[i][j] /= len(raw_data)
+
+
+        
+        ys = [tAvg_data[0][i] for i in range(len(tAvg_data[0]))]
+        xs = np.linspace(x_start, x_stop/1000, len(ys))
+
+    else:
+        print("No simulations have been done with these params")
+        exit()
+
+    plt.plot(xs, ys, linewidth=2)
+    plt.xlabel(r'$x$ $(\mu m)$')
+    plt.ylabel(r'$\mu_x$')
+    plt.tight_layout()
+
+    plotname = type + '/' + modules_folder + ani + '/underneath/plots/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/tAvg_damping' + str(damping) + '_V' + str(V) + '_' + str(T) + 'K.png'
+    plt.savefig(plotname, dpi=600)
+    # plt.show()
 
 def plot_tAvg_SA_2D(meshdims, cellsize, t, V, damping, data, x_start, x_stop, MEC, ani):
 
@@ -311,6 +418,7 @@ def plot_tAvg_SA_2D(meshdims, cellsize, t, V, damping, data, x_start, x_stop, ME
     plotname = ani + '/plots/' + mec_folder + 't_avg/' +  str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/2D_tAvg_damping' + str(damping) + '_V' + str(V) + '_' + str(data[1:-1]) + '_t' + str(t) + 'ps.png'
     plt.savefig(plotname, dpi=500)
     plt.show()
+
 
 def plot_tAvg_SA_2D_y(meshdims, cellsize, t, V, damping, data, x_start, x_stop, MEC, ani):
 
@@ -588,7 +696,7 @@ def plot_tAvg_comparison(plots, legends, savename, ani):
         #     xs = np.linspace(2.02, 2.5, len(ys))
 
         # If large temperatures we have to adjust for background noise
-        if k > 0:
+        if k > 2:
             background = 4*sum([y for y in ys[3*int(len(ys)/4):]]) / len(ys)
             ys = [y - background for y in ys]
 
@@ -609,64 +717,118 @@ def plot_tAvg_comparison(plots, legends, savename, ani):
     plt.ylabel(r'$\mu$ (normalized)')
 
     # plt.legend(title= r'$\mu$ value underneath injector ($10^{11}$)')
-    plt.legend(title='Temperature (K)')
+    plt.legend(title='Thickness (layers)')
 
     plt.savefig(savename, dpi=600)
     plt.show()
 
-def plot_magnon_dispersion(meshdims, cellsize, t, V, damping, MEC, ani, T, type, dir, axis, transport = False):
+def plot_magnon_dispersion(meshdims, cellsize, t, V, damping, MEC, ani, T, type, dir, axis, steadystate = False, clim_max = 1000):
 
     modules_folder = 'ex+ani'
     if MEC:
         modules_folder += 'mec'
     modules_folder += '/'
 
-    time_step = 0.1e-12
+    if type == 'AFM':
+        time_step = 0.1e-12
+        ylabel = 'f (THz)'
+        divisor = 1e12
+    elif type == 'FM':
+        time_step = 1e-12
+        ylabel = 'f (GHz)'
+        divisor = 1e9
 
 
-    if transport:
-        output_file = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'V' + str(V) + '_damping' + str(damping) + '_T' + str(T) +  '_dispersion.txt'
+    if steadystate:
+        output_file1 = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'V' + str(V) + '_damping' + str(damping) + '_T' + str(T) + '_y=5_dispersion.txt'
+        output_file2 = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'V' + str(V) + '_damping' + str(damping) + '_T' + str(T) + '_y=25_dispersion.txt'
+        output_file3 = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'V' + str(V) + '_damping' + str(damping) + '_T' + str(T) + '_y=45_dispersion.txt'
+        output_files = [output_file1, output_file2, output_file3]
         savename = type + '/' + modules_folder + ani + '/plots/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'V' + str(V) + '_damping' + str(damping) + '_T' + str(T) +  '_dispersion.png'
+        
+        fig, ax = plt.subplots(1,3)
+
+        fig.set_figheight(5)
+        fig.set_figwidth(16)
+        yvals =[5,25,45]
+        
+        for i, output_filex in enumerate(output_files):
+            
+            pos_time = np.loadtxt(output_filex)
+
+            fourier_data = np.fft.fftshift(np.abs(np.fft.fft2(pos_time)))
+
+            freq_len = len(fourier_data)
+            k_len = len(fourier_data[0])
+            freq = np.fft.fftfreq(freq_len, time_step)
+            kvector = np.fft.fftfreq(k_len, 5e-9)
+
+            k_max = 2*np.pi*kvector[int(0.5 * len(kvector))]*5e-9
+            f_min = np.abs(freq[0])
+            f_max = np.abs(freq[int(0.5 * len(freq))])/divisor # THz for FM and GHz for FM
+            f_points = int(0.5 * freq_len)
+
+            result = [fourier_data[i] for i in range(int(0.5 *freq_len),freq_len)]
+
+            ax[i].imshow(result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
+
+            label = 'q' + axis
+
+            ax[i].set_xlabel(label)
+            ax[i].set_ylabel(ylabel)
+            # ax1.set_ylim(0, 0.1)
+            title = r'y = ' + str(yvals[i]*1e-3) + ' $\mu$m'
+            ax[i].title.set_text(title)
+
+        folder_name = type + '/' + modules_folder + ani + '/plots/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
+        if not os.path.exists(folder_name):
+            os.makedirs(folder_name)
+
+        plt.tight_layout()
+
+        plt.savefig(savename, dpi=600)
+
+        plt.show()
     else:
         output_file = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'groundstate' + '_damping' + str(damping) + '_T' + str(T) +  '_dispersion.txt'
         savename = type + '/' + modules_folder + ani + '/plots/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'groundstate' + '_damping' + str(damping) + '_T' + str(T) +  '_dispersion.png'
 
-    pos_time = np.loadtxt(output_file)
+        pos_time = np.loadtxt(output_file)
 
-    fourier_data = np.fft.fftshift(np.abs(np.fft.fft2(pos_time)))
+        fourier_data = np.fft.fftshift(np.abs(np.fft.fft2(pos_time)))
 
-    freq_len = len(fourier_data)
-    k_len = len(fourier_data[0])
-    freq = np.fft.fftfreq(freq_len, time_step)
-    kvector = np.fft.fftfreq(k_len, 5e-9)
+        freq_len = len(fourier_data)
+        k_len = len(fourier_data[0])
+        freq = np.fft.fftfreq(freq_len, time_step)
+        kvector = np.fft.fftfreq(k_len, 5e-9)
 
-    k_max = 2*np.pi*kvector[int(0.5 * len(kvector))]*5e-9
-    f_min = np.abs(freq[0])
-    f_max = np.abs(freq[int(0.5 * len(freq))])/1e12 # to make it THz
-    f_points = int(0.5 * freq_len)
+        k_max = 2*np.pi*kvector[int(0.5 * len(kvector))]*5e-9
+        f_min = np.abs(freq[0])
+        f_max = np.abs(freq[int(0.5 * len(freq))])/divisor # to make it THz
+        f_points = int(0.5 * freq_len)
 
-    result = [fourier_data[i] for i in range(int(0.5 *freq_len),freq_len)]
+        result = [fourier_data[i] for i in range(int(0.5 *freq_len),freq_len)]
 
-    fig1,ax1 = plt.subplots()
+        fig1,ax1 = plt.subplots()
 
-    ax1.imshow(result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, 400))
+        ax1.imshow(result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
 
-    label = 'q' + dir
+        label = 'q' + dir
 
-    ax1.set_xlabel(label)
-    ax1.set_ylabel('f (THz)')
-    # ax1.set_ylim(0, 0.1)
+        ax1.set_xlabel(label)
+        ax1.set_ylabel(ylabel)
+        # ax1.set_ylim(0, 0.1)
 
-    plt.tight_layout()
+        plt.tight_layout()
 
-    folder_name = type + '/' + modules_folder + ani + '/plots/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
+        folder_name = type + '/' + modules_folder + ani + '/plots/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
+        if not os.path.exists(folder_name):
+            os.makedirs(folder_name)
 
 
-    plt.savefig(savename, dpi=600)
+        plt.savefig(savename, dpi=600)
 
-    plt.show()
+        plt.show()
 
 def plot_phonon_dispersion(meshdims, damping, MEC, ani, dir,time_step):
 
@@ -900,8 +1062,9 @@ def plot_critical_T(meshdims, damping, MEC, ani, type):
         xs.append(T)
         ys.append(m)
         
-
+    ys = [abs(y) for y in ys]
     max_y = max(ys)
+    # if max_y > 0:
     ys = [y/max_y for y in ys]
 
     plt.plot(xs, ys, linewidth=3)
@@ -912,7 +1075,7 @@ def plot_critical_T(meshdims, damping, MEC, ani, type):
 
     savename = type + '/' + modules_folder + ani + '/plots/critical_T/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/critical_T.png'
     plt.xlabel(r'Temperature ($K$)')
-    plt.ylabel(r'${m}_{x}$')
+    plt.ylabel(r'|${m}_{x}$|')
     plt.tight_layout()
     plt.savefig(savename, dpi=600)
     plt.show()
@@ -974,20 +1137,27 @@ def plot_diffusion_length(plots, ts, savename, ani):
         #     ys = ys[int(len(ys)/2):]
         #     xs = np.linspace(2.02, 2.5, len(ys))
 
-        if k == 0:
-            ys = ys[int(len(ys)/2):]
+        # if k == 0:
+        #     ys = ys[int(len(ys)/2):]
 
         ys = [(((y )/ys[0])) for y in ys]
+        min_y = min(ys)
+        ys =[y + min_y for y in ys]
         xs = np.linspace(0, 1.98, len(ys))
 
+        # def f(x, a, b):
+        #     return a + np.exp(b* x**2)
+
+        # params, params_cov = curve_fit(f, xs, ys)
+
         def f(x, a, b):
-            return a + np.exp(b* x**2)
+            return a - b*x   
 
         params, params_cov = curve_fit(f, xs, ys)
 
-        # plt.plot(ts[k], params[1], marker='v', markersize = 10, color='black')
-        plt.plot(f(xs, params[0], params[1]), xs, color=colors[k])
-        plt.plot(xs, ys, color=colors[k])
+        plt.plot(ts[k], params[1], marker='v', markersize = 10, color='black')
+        # plt.plot(f(xs, params[0], params[1]), xs, color=colors[k])
+        # plt.plot(xs, ys, color=colors[k])
 
     plt.xlabel('Thickness (layers)')
     plt.ylabel(r'$L_d$ (μm)')
@@ -997,56 +1167,96 @@ def plot_diffusion_length(plots, ts, savename, ani):
 
     plt.show()
 
+def plot_current_density(meshdims, cellsize, t, V, damping, MEC, ani, T, type):
+
+    plt.figure(figsize=(10, 7))
+
+    modules_folder = 'ex+ani'
+    if MEC:
+        modules_folder += '+mec'
+    modules_folder += '/'
+
+    folder_name = type + '/' + modules_folder + ani + '/plots/' + 'current_density/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
+    if not os.path.exists(folder_name):
+        os.makedirs(folder_name)
+
+
+    filename = type + '/' + modules_folder + ani + '/cache/current_density/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/Jc'  + str(V) + '_damping' + str(damping) + '_' + str(T) + 'K.txt'
+
+    f = open(filename, 'r')
+
+    lines = f.readlines()
+    lines = lines[10:]
+
+    array = np.array([np.array([line.split('\t')]) for line in lines])
+
+    transposed = array.transpose()
+
+    for elem in transposed:
+        ys = []
+        for val in elem:
+            ys.append(float(val))
+        xs = np.linspace(0, t, len(ys))
+        plt.plot(xs, ys)
+
+    savename = type + '/' + modules_folder + ani + '/plots/current_density/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/Jc'  + str(V) + '_damping' + str(damping) + '_' + str(T) + 'K.png'
+    plt.savefig(savename, dpi=500)
+    plt.show()
+
 def main():
 
-    # f1 = 'IP/cache/t_avg/4000x50x5/tAvg_damping0.0004_V-0.0115_mxdmdt.txt'
-    # f2 = 'IP/cache/t_avg/4000x50x10/tAvg_damping0.0004_V-0.045_mxdmdt.txt'
-    # f3 = 'IP/cache/t_avg/4000x50x15/tAvg_damping0.0004_V-0.12_mxdmdt.txt'
-    # f4 = 'IP/cache/t_avg/4000x50x20/tAvg_damping0.0004_V-0.27_mxdmdt.txt'
-    # f5 = 'IP/cache/t_avg/4000x50x25/tAvg_damping0.0004_V-0.4_mxdmdt.txt'
-    # f6 = 'IP/cache/t_avg/4000x50x30/tAvg_damping0.0004_V-0.53_mxdmdt.txt'
-    # f7 = 'IP/cache/t_avg/4000x50x35/tAvg_damping0.0004_V-0.63_mxdmdt.txt'
-    # f8 = 'IP/cache/t_avg/4000x50x40/tAvg_damping0.0004_V-0.73_mxdmdt.txt'
-    # f9 = 'IP/cache/t_avg/4000x50x45/tAvg_damping0.0004_V-0.8_mxdmdt.txt'
+    f1 = 'AFM/ex+ani/IP/underneath/cache/t_avg/4000x50x5/tAvg_damping0.0004_V-0.06_0.3K.txt'
+    f2 = 'AFM/ex+ani/IP/underneath/cache/t_avg/4000x50x10/tAvg_damping0.0004_V-0.12_0.3K.txt'
+    f3 = 'AFM/ex+ani/IP/underneath/cache/t_avg/4000x50x15/tAvg_damping0.0004_V-0.18_0.3K.txt'
+    f4 = 'AFM/ex+ani/IP/underneath/cache/t_avg/4000x50x20/tAvg_damping0.0004_V-0.25_0.3K.txt'
+    f5 = 'AFM/ex+ani/IP/underneath/cache/t_avg/4000x50x25/tAvg_damping0.0004_V-0.32_0.3K.txt'
+    f6 = 'AFM/ex+ani/IP/underneath/cache/t_avg/4000x50x30/tAvg_damping0.0004_V-0.38_0.3K.txt'
+    f7 = 'AFM/ex+ani/IP/underneath/cache/t_avg/4000x50x35/tAvg_damping0.0004_V-0.45_0.3K.txt'
+    f8 = 'AFM/ex+ani/IP/underneath/cache/t_avg/4000x50x40/tAvg_damping0.0004_V-0.52_0.3K.txt'
+    f9 = 'AFM/ex+ani/IP/underneath/cache/t_avg/4000x50x45/tAvg_damping0.0004_V-0.58_0.3K.txt'
+    f10 = 'AFM/ex+ani/IP/underneath/cache/t_avg/4000x50x50/tAvg_damping0.0004_V-0.63_0.3K.txt'
 
-    # l1 = '1'
-    # l2 = '2'
-    # l3 = '3'
-    # l4 = '4'
-    # l5 = '5'
-    # l6 = '6'
-    # l7 = '7'
-    # l8 = '8'
-    # l9 = '9'
+    l1 = '1'
+    l2 = '2'
+    l3 = '3'
+    l4 = '4'
+    l5 = '5'
+    l6 = '6'
+    l7 = '7'
+    l8 = '8'
+    l9 = '9'
+    l10 ='10'
 
-    # # # # # # title = 'Normalized spin accumulation with/without MEC'
+    # # # # # title = 'Normalized spin accumulation with/without MEC'
 
-    # f1 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x25/tAvg_damping0.0004_V-0.4_0.3K.txt'
-    # f2 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x25/tAvg_damping0.0004_V-0.5_5K.txt'
-    # f3 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x5/tAvg_damping0.0004_V-0.04_0.3K.txt'
+    # f1 = 'AFM/ex+ani/IP/cache/t_avg/3000x50x100/tAvg_damping0.0004_V-3.5_0.3K.txt'
+    # f2 = 'AFM/ex+ani/IP/cache/t_avg/3000x50x100/tAvg_damping0.0004_V-3.5_5K.txt'
+    # f3 = 'AFM/ex+ani/IP/cache/t_avg/3000x50x100/tAvg_damping0.0004_V-4.5_10K.txt'
+    # f4 = 'AFM/ex+ani/IP/cache/t_avg/3000x50x100/tAvg_damping0.0004_V-4.5_20K.txt'
 
     # l1 = '0.3'
     # l2 = '5'
-    # l3 = '5'
+    # l3 = '10'
+    # l4 = '20'
 
-    # savename = 'AFM/ex+ani/IP/plots/custom/5layer_temp_comparison.png'
+    savename = 'AFM/ex+ani/IP/plots/custom/thickness_comparison_constant_Jc_over_d_1.1e8_underneath.png'
 
-    # plot_tAvg_comparison([f1,f2], [l1,l2], savename, 'IP')
+    plot_tAvg_comparison([f1,f2,f3,f4,f5,f6,f7,f9], [l1,l2,l3,l4,l5,l6,l7,l9], savename, 'IP')
 
     # plot_dispersion([4000, 50, 5], 4e-4, 1, 'OOP', 'y')
 
     # # # FOR DISPERSIONS DOWN HERE
 
-    f1 = 'AFM/ex+ani/IP/cache/dispersions/4000x50x5/diry_axisxV-0.0115_damping0.0004_T0.3_dispersion.txt'
-    f2 = 'AFM/ex+ani/IP/cache/dispersions/4000x50x5/diry_axisxV-0.02_damping0.0004_T0.3_dispersion.txt'
-    f3 = 'AFM/ex+ani/IP/cache/dispersions/4000x50x5/diry_axisxV-0.04_damping0.0004_T0.3_dispersion.txt'
-    # f4 = 'IP/cache/dispersions/1000x50x150/steady/diry_axisx_dispersion.txt'
-    # f5 = 'IP/cache/dispersions/1000x50x190/steady/diry_axisx_dispersion.txt'
+    # f1 = 'AFM/ex+ani/IP/cache/dispersions/4000x50x5/diry_axisxV-0.0115_damping0.0004_T0.3_dispersion.txt'
+    # f2 = 'AFM/ex+ani/IP/cache/dispersions/4000x50x5/diry_axisxV-0.02_damping0.0004_T0.3_dispersion.txt'
+    # f3 = 'AFM/ex+ani/IP/cache/dispersions/4000x50x5/diry_axisxV-0.04_damping0.0004_T0.3_dispersion.txt'
+    # # f4 = 'IP/cache/dispersions/1000x50x150/steady/diry_axisx_dispersion.txt'
+    # # f5 = 'IP/cache/dispersions/1000x50x190/steady/diry_axisx_dispersion.txt'
 
 
-    savename = 'AFM/ex+ani/IP/plots/custom/1layer_dispersion_torque_comparison_0.3K.png'
+    # savename = 'AFM/ex+ani/IP/plots/custom/1layer_dispersion_torque_comparison_0.3K.png'
 
-    plot_dispersions((f1,f2,f3), savename)
+    # plot_dispersions((f1,f2,f3), savename)
 
     # ### DIFFUSION LENGTHS DOWN HERE
 
@@ -1062,7 +1272,7 @@ def main():
 
     # ts = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 
-    # savename = 'IP/plots/t_avg/finished/diffusion_length.png'
+    # savename = 'AFM/ex+ani/IP/plots/custom/diffusionlengths_constant_Jc_over_d_1.1e8.png'
 
     # plot_diffusion_length([f1,f2,f3,f4,f5,f6,f7,f8,f9], ts, savename, 'IP')
 
