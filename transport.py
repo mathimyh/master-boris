@@ -12,7 +12,7 @@ import plotting
 path = 'C:/Users/mathimyh/master/master-boris/'
 
 # Initializes an AFM mesh with hematite parameters. Returns the mesh
-def Init_AFM(meshdims, cellsize, damping, MEC, ani, T):
+def Init_AFM(meshdims, cellsize, damping, MEC, ani, T, hard_axis):
 
     ns = NSClient(); ns.configure(True, False)
     ns.cuda(1)    # ns.selectcudadevice([0,1])
@@ -28,7 +28,7 @@ def Init_AFM(meshdims, cellsize, damping, MEC, ani, T):
     temp = str(T) + 'K'
     ns.temperature(temp)
     ns.setode('sLLG', 'RK4') # Stochastic LLG for temperature effects
-    ns.setdt(1e-15) # 1fs is good time step
+    ns.setdt(1e-15)
 
     # Set parameters. Should possibly just save these in the database really    
     AFM.param.grel_AFM = 1
@@ -40,8 +40,12 @@ def Init_AFM(meshdims, cellsize, damping, MEC, ani, T):
     AFM.param.Anh = 0.0
     AFM.param.J1 = 0
     AFM.param.J2 = 0
-    AFM.param.K1_AFM = 21 # J/m^3
-    AFM.param.K2_AFM = 0
+    if hard_axis:
+        AFM.param.K1_AFM = -21e-3 # J/m^3
+        AFM.param.K2_AFM = 21
+    else:
+        AFM.param.K1_AFM = 21 # J/m^3
+        AFM.param.K2_AFM = 0
     AFM.param.K3_AFM = 0
     AFM.param.cHa = 1
     # Different anisotropies
@@ -54,7 +58,7 @@ def Init_AFM(meshdims, cellsize, damping, MEC, ani, T):
         print('Choose anisotropy direction')
         exit()
 
-    # Add increased damping at edges along x-axis to prevent reflections. For short meshes this needs to be shortened
+    # Add increased damping at edges along x-axis to prevent reflections. For smaller meshes this needs to be shortened
     damping_x = 300
     if meshdims[0] == 1000:
         damping_x = 50
@@ -70,6 +74,7 @@ def Init_AFM(meshdims, cellsize, damping, MEC, ani, T):
         AFM.param.MEc = (-3.44e6, 7.5e6) #J/m^3  (Original B2 = 7.5e6)   G. Wedler et al (1999) 
         AFM.param.mdamping = 1e15 # Should probably be lower than this 
 
+    
     # Relax for 1 ps to get some fluctuations
     ns.Relax(['time', 1e-12])
 
@@ -77,7 +82,7 @@ def Init_AFM(meshdims, cellsize, damping, MEC, ani, T):
     return AFM
 
 # Initializes a FM mesh with same parameters as AFM. Returns the mesh
-def Init_FM(meshdims, cellsize, damping, MEC, ani, T):
+def Init_FM(meshdims, cellsize, damping, MEC, ani, T, hard_axis):
 
     # Folder system
     modules_folder = 'ex+ani'
@@ -108,10 +113,10 @@ def Init_FM(meshdims, cellsize, damping, MEC, ani, T):
     FM.param.damping =  damping
     FM.param.Ms = 2.1e3
     FM.param.Nxy = 0
-    FM.param.A = 76e-14 # J/m
+    FM.param.A = 76e-15 # J/m
     FM.param.J1 = 0
     FM.param.J2 = 0
-    FM.param.K1 = 2100 # J/m^3
+    FM.param.K1 = 21 # J/m^3
     FM.param.K2 = 0
     FM.param.K3 = 0
     FM.param.cHa = 1
@@ -151,13 +156,13 @@ def Init_FM(meshdims, cellsize, damping, MEC, ani, T):
     return FM
 
 # Sets up a simulation with a virtual current
-def virtual_current(meshdims, cellsize, damping, MEC, ani, T, type):
+def virtual_current(meshdims, cellsize, damping, MEC, ani, T, type, hard_axis):
 
     ns = NSClient(); ns.configure(True, False)
     
     # Retrieve the desired mesh
     if type == 'AFM':
-        M = Init_AFM(meshdims, cellsize, damping, MEC, ani, T)
+        M = Init_AFM(meshdims, cellsize, damping, MEC, ani, T, hard_axis)
     elif type == 'FM':
         M = Init_FM(meshdims, cellsize, damping, MEC, ani, T)
     else:
@@ -174,7 +179,10 @@ def virtual_current(meshdims, cellsize, damping, MEC, ani, T, type):
 
     # Set spesific params for torque
     M.param.SHA = 1
-    M.param.flST = 1
+    if type == 'FM':
+        M.param.flST = 0
+    else:
+        M.param.flST = 1
 
     # If OOP ani, we need to change the spin current direction
     if ani == 'OOP':
@@ -201,7 +209,7 @@ def virtual_current(meshdims, cellsize, damping, MEC, ani, T, type):
     #     exit(1)
     
     # Add step function so that torque only acts on region in the injector
-    width = 20
+    width = 40
     func = '(step(x-' + str(meshdims[0]/2 - width/2) + 'e-9)-step(x-' + str(meshdims[0]/2 + width/2) + 'e-9)) * (step(z-' + str(meshdims[2]-cellsize) + 'e-9)-step(z-' + str(meshdims[2]) + 'e-9))'
     M.param.SHA.setparamvar('equation', func)
     M.param.flST.setparamvar('equation',func)
@@ -214,15 +222,17 @@ def virtual_current(meshdims, cellsize, damping, MEC, ani, T, type):
 # Runs a simulation from ground state for a given time
 # Saves the simulation after
 # Can plot magnetization at x_vals to find plateau 
-def save_steadystate(ns, meshdims, cellsize, t, V, damping, MEC, ani, T, type, x_vals=False):
+def save_steadystate(ns, meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, x_vals=False):
     
     # Folder system
     modules_folder = 'ex+ani'
     if MEC:
         modules_folder += '+mec'
+    if hard_axis:
+        modules_folder += '+hard_axis'
     modules_folder += '/'
 
-    M = virtual_current(meshdims, cellsize, damping, MEC, ani, T, type)
+    M = virtual_current(meshdims, cellsize, damping, MEC, ani, T, type, hard_axis)
     ns.iterupdate(200)
 
     savename = path + type + '/' + modules_folder + ani + '/sims/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/V' + str(V) + '_damping' + str(damping) + '_' + str(T) + 'K_steady_state.bsm'
@@ -248,19 +258,21 @@ def save_steadystate(ns, meshdims, cellsize, t, V, damping, MEC, ani, T, type, x
 
         ns.V([0.001*V, 'time', t*1e-12, 'time', 5e-12])
         ns.savesim(savename)
-        plotting.plot_plateau(meshdims, V, damping, x_vals, MEC, ani, T, type)
+        plotting.plot_plateau(meshdims, V, damping, x_vals, MEC, ani, T, type, hard_axis)
 
     # Just run the simulation
     else:
         ns.V([0.001*V, 'time', t*1e-12])
         ns.savesim(savename)
 
-def save_steadystate2(ns, meshdims, cellsize, t, V, damping, MEC, ani, T, type, x_vals=False):
+def save_steadystate2(ns, meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis,x_vals=False):
     
     # Folder system
     modules_folder = 'ex+ani'
     if MEC:
         modules_folder += '+mec'
+    if hard_axis:
+        modules_folder += '+hard_axis'
     modules_folder += '/'
 
     sim_name = path + type + '/' + modules_folder + ani + '/sims/' +  str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/ground_state.bsm'
@@ -269,7 +281,7 @@ def save_steadystate2(ns, meshdims, cellsize, t, V, damping, MEC, ani, T, type, 
     ns.addmodule("FM", "SOTfield")
     ns.addmodule("FM", "transport")
     ns.setparam("FM", "SHA", '1')
-    ns.setparam("FM", "flST", '1')
+    ns.setparam("FM", "flST", '0')
     ns.clearelectrodes()
     ns.reset()
 
@@ -321,7 +333,7 @@ def save_steadystate2(ns, meshdims, cellsize, t, V, damping, MEC, ani, T, type, 
         ns.savesim(savename)
 
 # Run transport simulation and save current density over time (all 3 components)
-def current_density(meshdims, cellsize, t, V, damping, MEC, ani, T, type):
+def current_density(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis):
     
     ns = NSClient(); ns.configure(True, False)
     ns.cuda(1)
@@ -333,27 +345,42 @@ def current_density(meshdims, cellsize, t, V, damping, MEC, ani, T, type):
         modules.append('melastic')
 
     # Set up the antiferromagnet
-    AFM = ns.AntiFerromagnet(np.array(meshdims)*1e-9, [cellsize*1e-9])
+    if type == 'AFM':
+        AFM = ns.AntiFerromagnet(np.array(meshdims)*1e-9, [cellsize*1e-9])
+        # Set parameters. Should possibly just save these in the database really    
+        AFM.param.grel_AFM = 1
+        AFM.param.damping_AFM =  damping
+        AFM.param.Ms_AFM = 2.1e3
+        AFM.param.Nxy = 0
+        AFM.param.A_AFM = 76e-15 # J/m
+        AFM.param.Ah = -460e3 # J/m^3
+        AFM.param.Anh = 0.0
+        AFM.param.J1 = 0
+        AFM.param.J2 = 0
+        AFM.param.K1_AFM = 21 # J/m^3
+        AFM.param.K2_AFM = 0
+        AFM.param.K3_AFM = 0
+        AFM.param.cHa = 1
+    elif type == 'FM':
+        AFM = ns.Ferromagnet(np.array(meshdims)*1e-9, [cellsize*1e-9])
+        # Set parameters. Should possibly just save these in the database really    
+        AFM.param.grel = 1
+        AFM.param.damping =  damping
+        AFM.param.Ms = 2.1e3
+        AFM.param.Nxy = 0
+        AFM.param.A = 76e-15 # J/m
+        AFM.param.J1 = 0
+        AFM.param.J2 = 0
+        AFM.param.K1 = 2100 # J/m^3
+        AFM.param.K2 = 0
+        AFM.param.K3 = 0
+        AFM.param.cHa = 1
     AFM.modules(modules)
     temp = str(T) + 'K'
     ns.temperature(temp)
     ns.setode('sLLG', 'RK4') # Stochastic LLG for temperature effects
     ns.setdt(1e-15) # 1fs is good time step
 
-    # Set parameters. Should possibly just save these in the database really    
-    AFM.param.grel_AFM = 1
-    AFM.param.damping_AFM =  damping
-    AFM.param.Ms_AFM = 2.1e3
-    AFM.param.Nxy = 0
-    AFM.param.A_AFM = 76e-15 # J/m
-    AFM.param.Ah = -460e3 # J/m^3
-    AFM.param.Anh = 0.0
-    AFM.param.J1 = 0
-    AFM.param.J2 = 0
-    AFM.param.K1_AFM = 21 # J/m^3
-    AFM.param.K2_AFM = 0
-    AFM.param.K3_AFM = 0
-    AFM.param.cHa = 1
     # Different anisotropies
     if ani == 'OOP':
         AFM.param.ea1 = (0,0,1) # Set it z-direction
@@ -368,8 +395,11 @@ def current_density(meshdims, cellsize, t, V, damping, MEC, ani, T, type):
     damping_x = 300
     if meshdims[0] == 1000:
         damping_x = 50
-    AFM.param.damping_AFM.setparamvar('abl_tanh', [damping_x/meshdims[0], damping_x/meshdims[0], 0, 0, 0, 0, 1, 10, damping_x]) 
-    
+    if type == 'AFM':
+        AFM.param.damping_AFM.setparamvar('abl_tanh', [damping_x/meshdims[0], damping_x/meshdims[0], 0, 0, 0, 0, 1, 10, damping_x]) 
+    elif type == 'FM':
+        AFM.param.damping.setparamvar('abl_tanh', [damping_x/meshdims[0], damping_x/meshdims[0], 0, 0, 0, 0, 1, 10, damping_x]) 
+
     # Add the magnetoelastic parameters if necessary
     if MEC:
         AFM.surfacefix('-z')
@@ -415,6 +445,8 @@ def current_density(meshdims, cellsize, t, V, damping, MEC, ani, T, type):
     modules_folder = 'ex+ani'
     if MEC:
         modules_folder += '+mec'
+    if hard_axis:
+        modules_folder += '+hard_axis'
     modules_folder += '/'
 
     ns.reset()
@@ -438,11 +470,13 @@ def current_density(meshdims, cellsize, t, V, damping, MEC, ani, T, type):
     # plotting.plot_current_density(meshdims, cellsize, t, V, damping, MEC, ani, T, type)
     
 # Loads a simulation in steady state, runs the simulation and saves time and <mxdmdt> along the x-axis
-def time_avg_SA(meshdims, cellsize, t, V, damping, MEC, ani, T, type, x_start, x_stop):
+def time_avg_SA(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, x_start, x_stop):
 
     modules_folder = 'ex+ani'
     if MEC:
         modules_folder = '+mec'
+    if hard_axis:
+        modules_folder += '+hard_axis'
     modules_folder += '/'
 
     folder_name = type + '/' + modules_folder + ani + '/cache/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
@@ -476,7 +510,7 @@ def time_avg_SA(meshdims, cellsize, t, V, damping, MEC, ani, T, type, x_start, x
 
     # ns.Run()
 
-    plotting.plot_tAvg_SA(meshdims, cellsize, t, V, damping, MEC, ani, T, type, x_start, x_stop)
+    plotting.plot_tAvg_SA(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, x_start, x_stop)
  
 # Save 2D magnetization
 def time_avg_SA_2D(meshdims, cellsize, t, V, damping, data, x_start, x_stop, MEC, ani):
@@ -581,7 +615,7 @@ def time_avg_SA_2D_y(meshdims, cellsize, t, V, damping, data, x_start, x_stop, M
 
     plotting.plot_tAvg_SA_2D_y(meshdims, cellsize, t, V, damping, data, x_start, x_stop, MEC, ani)
 
-def time_avg_SA_z(meshdims, cellsize, t, V, damping, MEC, ani, T, type):
+def time_avg_SA_z(ns, meshdims, cellsize, t, V, damping, MEC, ani, T, type):
     modules_folder = 'ex+ani'
     if MEC:
         modules_folder = '+mec'
@@ -593,8 +627,6 @@ def time_avg_SA_z(meshdims, cellsize, t, V, damping, MEC, ani, T, type):
 
     # sim_name = 'C:/Users/mathimyh/documents/boris data/simulations/boris_fordypningsoppgave/' + ani + '/sims/' + mec_folder + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/V' + str(V) + '_damping' + str(damping) + '_steady_state.bsm'
     sim_name = path + type + '/' + modules_folder + ani + '/sims/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/V' + str(V) + '_damping' + str(damping) + '_' + str(T) + 'K_steady_state.bsm'
-
-    ns = NSClient(); ns.configure(True, False)
     ns.reset()
     
     # Loading the sim. All the parameters and parameters variation is still there so don't need to add back
@@ -688,7 +720,7 @@ def time_avg_SA_underneath(ns, meshdims, cellsize, t, V, damping, MEC, ani, T, t
 
     plotting.plot_tAvg_SA_underneath(meshdims, cellsize, t, V, damping, MEC, ani, T, type, x_start,x_stop)
 
-def complete_simulation_AFM(ns, meshdims, cellsize, t_steady, t_saving, V, damping, MEC, ani, T):
+def complete_simulation_AFM(ns, meshdims, cellsize, t_steady, t_saving, V, damping, MEC, ani, T, hard_axis):
     modules = ['exchange', 'aniuni']
     if MEC:
         modules.append('melastic')
@@ -711,8 +743,12 @@ def complete_simulation_AFM(ns, meshdims, cellsize, t_steady, t_saving, V, dampi
     AFM.param.Anh = 0.0
     AFM.param.J1 = 0
     AFM.param.J2 = 0
-    AFM.param.K1_AFM = 21 # J/m^3
-    AFM.param.K2_AFM = 0
+    if hard_axis:
+        AFM.param.K1_AFM = -21e-3 # J/m^3
+        AFM.param.K2_AFM = 21
+    else:
+        AFM.param.K1_AFM = 21 # J/m^3
+        AFM.param.K2_AFM = 0
     AFM.param.K3_AFM = 0
     AFM.param.cHa = 1
     # Different anisotropies
@@ -776,6 +812,8 @@ def complete_simulation_AFM(ns, meshdims, cellsize, t_steady, t_saving, V, dampi
     modules_folder = 'ex+ani'
     if MEC:
         modules_folder += '+mec'
+    if hard_axis:
+        modules_folder += '+hard_axis'
     modules_folder += '/'
 
     ns.reset()
@@ -812,7 +850,7 @@ def complete_simulation_AFM(ns, meshdims, cellsize, t_steady, t_saving, V, dampi
 
     plotting.plot_tAvg_SA(meshdims, cellsize, t_saving, V, damping, MEC, ani, T, 'AFM', x_start, x_stop)
 
-def complete_simulation_AFM_z(ns, meshdims, cellsize, t_steady, t_saving, V, damping, MEC, ani, T):
+def complete_simulation_AFM_z(ns, meshdims, cellsize, t_steady, t_saving, V, damping, MEC, ani, T, hard_axis):
     modules = ['exchange', 'aniuni']
     if MEC:
         modules.append('melastic')
@@ -835,8 +873,12 @@ def complete_simulation_AFM_z(ns, meshdims, cellsize, t_steady, t_saving, V, dam
     AFM.param.Anh = 0.0
     AFM.param.J1 = 0
     AFM.param.J2 = 0
-    AFM.param.K1_AFM = 21 # J/m^3
-    AFM.param.K2_AFM = 0
+    if hard_axis:
+        AFM.param.K1_AFM = -21e-3 # J/m^3
+        AFM.param.K2_AFM = 21
+    else:
+        AFM.param.K1_AFM = 21 # J/m^3
+        AFM.param.K2_AFM = 0
     AFM.param.K3_AFM = 0
     AFM.param.cHa = 1
     # Different anisotropies
@@ -900,6 +942,8 @@ def complete_simulation_AFM_z(ns, meshdims, cellsize, t_steady, t_saving, V, dam
     modules_folder = 'ex+ani'
     if MEC:
         modules_folder += '+mec'
+    if hard_axis:
+        modules_folder += '+hard_axis'
     modules_folder += '/'
 
     ns.reset()

@@ -7,10 +7,7 @@ import os
 sys.path.insert(0, 'C:/users/mathimyh/documents/boris data/borispythonscripts/')
 
 from NetSocks import NSMultiClient   # type: ignore
-
-def simulate_2_Ts(ns, steady_params, saving_params):
-    transport.save_steadystate(*steady_params)
-    transport.time_avg_SA(*saving_params)
+from NetSocks import NSClient # type:ignore
 
 def main():
     
@@ -23,30 +20,51 @@ def main():
 
     # Parameters
     t = 100
-    V = -0.03
-    data = '<mxdmdt>'
+    V = -0.06
     damping = 4e-4
     MEC = 0
+    hard_axis = 1
     ani = 'IP'
     type = 'AFM'
-    T = 20
-    x_vals = [2020, 2300, 2600, 3000, 3500, 4000]
+    T = 0.3
+    x_vals = [2000, 2100, 2200, 3000, 3500, 4000]
     # x_vals = [520, 600, 700, 800, 900, 1000]
+    # x_vals = [1000, 1200, 1300, 1500, 1700, 2000]
 
-    params = [meshdims, cellsize, t, V, damping, MEC, ani, T, type]
+    params = [meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis]
+    ns = NSClient(); ns.configure(True, False)
 
-    transport.save_steadystate(*params, x_vals)
-    # transport.time_avg_SA(*params, 1520, 3000)
-    # # plotting.plot_plateau(meshdims, V, damping, x_vals, MEC, ani, type)
-    # dispersion_relations.critical_T(meshdims, cellsize, t, damping, MEC, ani, type, 100)
-    # dispersion_relations.critical_T(meshdims, cellsize, t, damping, MEC, ani, type, max_T=500)
-    # dispersion_relations.magnon_dispersion(*params, 'y', 'x')
-    # plotting.plot_magnon_dispersion(*params, 'y','x', True, 1000)
-
+    # transport.time_avg_SA(*params, 2020, 4000)
+    plotting.plot_tAvg_SA(*params, 2020, 4000)
+    # plotting.fft_transport_underneath(*params)
+    # transport.save_steadystate(ns, *params, x_vals)
+    # transport.time_avg_SA_underneath(ns, *params, 2020,4000)
+    # plotting.plot_tAvg_SA(*params, 2020,4000)
+    # transport.Init_FM(meshdims, cellsize, damping, MEC, ani, T)
+    # transport.time_avg_SA(*params, 2020, 4000)
+    # plotting.plot_plateau(meshdims, V, damping, x_vals, MEC, ani, T, type)
+    # dispersion_relations.critical_T(ns, meshdims, cellsize, t, damping, MEC, ani, type, max_T=100)
+    # dispersion_relations.magnon_dispersion(ns, *params, 'y', 'x', False)
+    # plotting.plot_magnon_dispersion(*params, 'y','x', False, 1000)
+    # transport.current_density(*params)
+    # plotting.plot_critical_T(meshdims, damping, MEC, ani, type)
+    
     # nsm = NSMultiClient(scriptserverports = range(1000,1002), cudaDevices = range(0,2))
     # nsm.configure(True, False)
-    # nsm.Run(transport.complete_simulation_AFM, [meshdims]*2, [cellsize]*2, [400]*2, [100]*2, [V]*2, [damping]*2, [MEC]*2, [ani]*2, [10,20])
-    # plotting.plot_tAvg_SA(*params, 1520, 3000)
+    # meshes = []
+    # for i in range(5, 50, 5):
+    #     meshes.append([4000, 50, i])
+
+    # Vs = [-0.06, -0.12, -0.18, -0.25, -0.32, -0.38, -0.45, -0.52, -0.58]
+    # tot = len(meshes)
+
+    # nsm.Run(transport.complete_simulation_AFM_z, meshes, [cellsize]*tot, [1e6]*tot, [0]*tot, Vs, [damping]*tot, [MEC]*tot, [ani]*tot, [T]*tot)
+    # nsm.Run(dispersion_relations.magnon_dispersion, meshes, [cellsize]*tot, [t]*tot, Vs, [damping]*tot, [MEC]*tot, [ani]*tot, [T]*tot, [type]*tot, ['y']*tot, ['x']*tot, [True]*tot)
+    # nsm.Run(transport.time_avg_SA_z, meshes, [cellsize]*tot, [t]*tot, Vs, [damping]*tot, [MEC]*tot, [ani]*tot, [T]*tot, [type]*tot)
+    # nsm.Run(transport.save_steadystate(ns, [meshdims]*2, [cellsize]*2, [t]*2, [0.002, 0.003], [damping]*2, [MEC]*2, [ani]*2, [T]*2, [type]*2, [x_vals]*2))
+    # params = [meshdims, cellsi4ze, t, V, damping, MEC, ani, T, type]
+
+    meshdims, cellsize, t, V, damping, MEC, ani, T, type
 
 if __name__ == '__main__':
     main()

@@ -12,7 +12,7 @@ import transport
 
 path = 'C:/Users/mathimyh/master/master-boris/'
 
-def magnon_dispersion(ns, meshdims, cellsize, t, V, damping, MEC, ani, T, type, dir, axis, steadystate = False):
+def magnon_dispersion(ns, meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, dir, axis, steadystate = False):
 
     # # ns = NSClient(); ns.configure(True, False)
 
@@ -31,6 +31,8 @@ def magnon_dispersion(ns, meshdims, cellsize, t, V, damping, MEC, ani, T, type, 
     modules_folder = 'ex+ani'
     if MEC:
         modules_folder += 'mec'
+    if hard_axis:
+        modules_folder += '+hard_axis'
     modules_folder += '/'
 
     folder_name = type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
@@ -261,4 +263,3 @@ def critical_T(ns, meshdims, cellsize, t, damping, MEC, ani, type, max_T):
             f.write(f"{d}\n")
 
     plotting.plot_critical_T(meshdims, damping, MEC, ani, type)
-

@@ -79,11 +79,13 @@ def SA_plotting(filename, plotname, title):
     # plotname = "plots/" + plotname
     # plt.savefig(plotname, dpi=500)
 
-def plot_plateau(meshdims, V, damping, x_vals, MEC, ani, T, type):
+def plot_plateau(meshdims, V, damping, x_vals, MEC, ani, T, type, hard_axis):
 
     modules_folder = 'ex+ani'
     if MEC:
         modules_folder += '+mec'
+    if hard_axis:
+        modules_folder += '+hard_axis'
     modules_folder += '/'
 
     folder_name = type + '/' + modules_folder + ani + '/plots/plateau/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
@@ -148,13 +150,15 @@ def plot_plateau(meshdims, V, damping, x_vals, MEC, ani, T, type):
     fig.savefig(plotname, dpi=600)
     plt.show()
 
-def plot_tAvg_SA(meshdims, cellsize, t, V, damping, MEC, ani, T, type, x_start, x_stop):
+def plot_tAvg_SA(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, x_start, x_stop):
 
     plt.figure(figsize=(10, 7))
 
     modules_folder = 'ex+ani'
     if MEC:
         modules_folder += '+mec'
+    if hard_axis:
+        modules_folder += '+hard_axis'
     modules_folder += '/'
 
     folder_name = type + '/' + modules_folder + ani + '/plots/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
@@ -645,9 +649,9 @@ def plot_tAvg_SA_z(meshdims, cellsize, t, V, damping, MEC, ani, T, type):
 
     plotname = type + '/' + modules_folder + ani + '/plots/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/z_dir_tAvg_damping' + str(damping) + '_V' + str(V) + '_' + str(T) + 'K.png'
     plt.savefig(plotname, dpi=600)
-    plt.show()
+    # plt.show()
 
-def plot_tAvg_comparison(plots, legends, savename, ani):
+def plot_tAvg_comparison_with_reference(plots, legends, savename, ani):
 
     indexer = 0
     plt.figure(figsize=(13,8))
@@ -786,6 +790,82 @@ def plot_tAvg_comparison(plots, legends, savename, ani):
         # plt.plot(xs, ys, label=str(leg), linewidth=3, color=colors[k])
 
         indexer += 1
+
+    plt.xlabel('x (μm)')
+    plt.ylabel(r'$\mu$ (normalized)')
+
+    # plt.legend(title= r'$\mu$ value underneath injector ($10^{11}$)')
+    plt.legend(title='Thickness (layers)')
+
+    plt.savefig(savename, dpi=600)
+    plt.show()
+
+def plot_tAvg_comparison(plots, legends, savename, ani):
+
+    plt.figure(figsize=(13,8))
+
+    N = len(plots)
+    colors = plt.cm.viridis(np.linspace(0,1,N+1))
+    # colors = ['tab:blue', 'tab:red']
+
+    for k, plot in enumerate(plots):
+
+        f = open(plot, 'r')
+
+        plat = plot.split('/')[-1]
+        temps = plat.split('_')
+        temp = temps[2]
+        V = float(temp[1:])
+
+        lines = f.readlines()
+        lines = lines[10:]
+
+        vals = []
+
+        for i in range(len(lines)):
+            vec1 = lines[i].split('\t')
+            all_vals = vec1[1:]
+            ani_int = 0
+            if ani == 'OOP':
+                ani_int = 2
+            temp = []
+            while ani_int < len(all_vals):
+                temp.append(float(all_vals[ani_int]))
+                ani_int += 3
+            vals.append(temp)
+
+        ys = []
+
+        for i in range(len(vals[0])):
+            val = 0
+            for j in range(len(vals)):
+                val += float(vals[j][i])
+            val /= len(vals)
+            ys.append(val)
+
+
+        # if len(ys) > 1980:
+        #     ys = ys[len(ys)-1980:]
+
+        # ys = [(y) / ys[int(len(ys)/2)]  for y in ys]
+        # if k == 0:
+        #     ys = ys[int(len(ys)/2):]
+        # else:
+        #     ys = ys[int(len(ys)/2):]
+        #     xs = np.linspace(2.02, 2.5, len(ys))
+
+        # If large temperatures we have to adjust for background noise
+        if k > 2:
+            background = 4*sum([y for y in ys[3*int(len(ys)/4):]]) / len(ys)
+            ys = [y - background for y in ys]
+
+        leg = round(ys[0] * 1e-11, 1)
+
+        ys = [(y )/ys[0] for y in ys]
+        xs = np.linspace(2.02, 4, len(ys))
+
+        plt.plot(xs, ys, label=legends[k], linewidth=3, color=colors[k])
+        # plt.plot(xs, ys, label=str(leg), linewidth=3, color=colors[k])
 
     plt.xlabel('x (μm)')
     plt.ylabel(r'$\mu$ (normalized)')
