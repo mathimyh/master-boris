@@ -117,7 +117,8 @@ def plot_plateau(meshdims, V, damping, x_vals, MEC, ani, T, type, hard_axis):
 
         for line in lines:
             vec = line.split('\t')
-            # vec = vec[3:]
+            if lines[7][0] == 's':
+                vec = vec[3:]
             ts.append(float(vec[0])*1e12)
             vals.append(float(vec[i]))
 
@@ -257,7 +258,7 @@ def plot_tAvg_SA(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis
 
     plotname = type + '/' + modules_folder + ani + '/plots/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/tAvg_damping' + str(damping) + '_V' + str(V) + '_' + str(T) + 'K.png'
     plt.savefig(plotname, dpi=600)
-    plt.show()
+    # plt.show()
 
 def plot_tAvg_SA_underneath(meshdims, cellsize, t, V, damping, MEC, ani, T, type, x_start, x_stop):
 
@@ -876,11 +877,13 @@ def plot_tAvg_comparison(plots, legends, savename, ani):
     plt.savefig(savename, dpi=600)
     plt.show()
 
-def plot_magnon_dispersion(meshdims, cellsize, t, V, damping, MEC, ani, T, type, dir, axis, steadystate = False, clim_max = 1000):
+def plot_magnon_dispersion_with_zoom(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, dir, axis, steadystate = False, sinc=False, clim_max = 1000):
 
     modules_folder = 'ex+ani'
     if MEC:
-        modules_folder += 'mec'
+        modules_folder += '+mec'
+    if hard_axis:
+        modules_folder += '+hard_axis'
     modules_folder += '/'
 
     if type == 'AFM':
@@ -940,9 +943,124 @@ def plot_magnon_dispersion(meshdims, cellsize, t, V, damping, MEC, ani, T, type,
 
         plt.tight_layout()
 
-        plt.savefig(savename, dpi=600)
+    else:
+        if sinc:
+            sincstr = 'sinc_'
+        else:
+            sincstr = ''
+        output_file = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + sincstr + 'dir' + dir + '_axis' + axis + 'groundstate' + '_damping' + str(damping) + '_T' + str(T) +  '_dispersion.txt'
+        savename = type + '/' + modules_folder + ani + '/plots/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + sincstr + 'dir' + dir + '_axis' + axis + 'groundstate' + '_damping' + str(damping) + '_T' + str(T) +  '_dispersion.png'
 
-        plt.show()
+        pos_time = np.loadtxt(output_file)
+
+        fourier_data = np.fft.fftshift(np.abs(np.fft.fft2(pos_time)))
+
+        freq_len = len(fourier_data)
+        k_len = len(fourier_data[0])
+        freq = np.fft.fftfreq(freq_len, time_step)
+        kvector = np.fft.fftfreq(k_len, 5e-9)
+
+        k_max = 2*np.pi*kvector[int(0.5 * len(kvector))]*5e-9
+        f_min = np.abs(freq[0])
+        f_max = np.abs(freq[int(0.5 * len(freq))])/divisor # to make it THz
+        f_points = int(0.5 * freq_len)
+
+        result = [fourier_data[i] for i in range(int(0.5 *freq_len),freq_len)]
+
+        fig1,ax1 = plt.subplots()
+
+        ax1.imshow(result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
+
+        label = 'q' + dir
+
+        ax1.set_xlabel(label)
+        ax1.set_ylabel(ylabel)
+        # ax1.set_ylim(0, 0.1)
+
+        plt.tight_layout()
+
+        folder_name = type + '/' + modules_folder + ani + '/plots/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
+        if not os.path.exists(folder_name):
+            os.makedirs(folder_name)
+
+        x1, x2, y1, y2 = -0.1, 0.1, 0, 0.2
+        axins = ax1.inset_axes(
+            [0.5, 0.5, 0.47, 0.47],
+            xlim=(x1,x2), ylim=(y1,y2), xticklabels=[], yticklabels=[])
+        axins.imshow(result, extent = [-k_max, k_max,f_min, f_max], origin='lower')
+
+        ax1.indicate_inset_zoom(axins, edgecolor='black')
+
+    plt.savefig(savename, dpi=600)
+
+    plt.show()
+
+def plot_magnon_dispersion(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, dir, axis, steadystate = False, clim_max = 1000):
+
+    modules_folder = 'ex+ani'
+    if MEC:
+        modules_folder += '+mec'
+    if hard_axis:
+        modules_folder += '+hard_axis'
+    modules_folder += '/'
+
+    if type == 'AFM':
+        time_step = 0.1e-12
+        ylabel = 'f (THz)'
+        divisor = 1e12
+    elif type == 'FM':
+        time_step = 1e-12
+        ylabel = 'f (GHz)'
+        divisor = 1e9
+
+
+    if steadystate:
+        output_file1 = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'V' + str(V) + '_damping' + str(damping) + '_T' + str(T) + '_y=5_dispersion.txt'
+        output_file2 = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'V' + str(V) + '_damping' + str(damping) + '_T' + str(T) + '_y=25_dispersion.txt'
+        output_file3 = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'V' + str(V) + '_damping' + str(damping) + '_T' + str(T) + '_y=45_dispersion.txt'
+        output_files = [output_file1, output_file2, output_file3]
+        savename = type + '/' + modules_folder + ani + '/plots/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'V' + str(V) + '_damping' + str(damping) + '_T' + str(T) +  '_dispersion.png'
+        
+        fig, ax = plt.subplots(1,3)
+
+        fig.set_figheight(5)
+        fig.set_figwidth(16)
+        yvals =[5,25,45]
+        
+        for i, output_filex in enumerate(output_files):
+            
+            pos_time = np.loadtxt(output_filex)
+
+            fourier_data = np.fft.fftshift(np.abs(np.fft.fft2(pos_time)))
+
+            freq_len = len(fourier_data)
+            k_len = len(fourier_data[0])
+            freq = np.fft.fftfreq(freq_len, time_step)
+            kvector = np.fft.fftfreq(k_len, 5e-9)
+
+            k_max = 2*np.pi*kvector[int(0.5 * len(kvector))]*5e-9
+            f_min = np.abs(freq[0])
+            f_max = np.abs(freq[int(0.5 * len(freq))])/divisor # THz for FM and GHz for FM
+            f_points = int(0.5 * freq_len)
+
+            result = [fourier_data[i] for i in range(int(0.5 *freq_len),freq_len)]
+
+            ax[i].imshow(result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
+
+            label = 'q' + axis
+
+            ax[i].set_xlabel(label)
+            ax[i].set_ylabel(ylabel)
+            # ax1.set_ylim(0, 0.1)
+            title = r'y = ' + str(yvals[i]*1e-3) + ' $\mu$m'
+            ax[i].title.set_text(title)
+
+        folder_name = type + '/' + modules_folder + ani + '/plots/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
+        if not os.path.exists(folder_name):
+            os.makedirs(folder_name)
+
+        plt.tight_layout()
+
     else:
         output_file = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'groundstate' + '_damping' + str(damping) + '_T' + str(T) +  '_dispersion.txt'
         savename = type + '/' + modules_folder + ani + '/plots/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'groundstate' + '_damping' + str(damping) + '_T' + str(T) +  '_dispersion.png'
@@ -980,9 +1098,9 @@ def plot_magnon_dispersion(meshdims, cellsize, t, V, damping, MEC, ani, T, type,
             os.makedirs(folder_name)
 
 
-        plt.savefig(savename, dpi=600)
+    plt.savefig(savename, dpi=600)
 
-        plt.show()
+    # plt.show()
 
 def plot_phonon_dispersion(meshdims, damping, MEC, ani, dir,time_step):
 
@@ -1603,42 +1721,42 @@ def main():
     # f10 = 'AFM/ex+ani/IP/underneath/cache/t_avg/4000x50x50/tAvg_damping0.0004_V-0.63_0.3K.txt'
 
 
-    f1 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x5/tAvg_damping0.0004_V-0.06_0.3K.txt'
-    f2 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x10/tAvg_damping0.0004_V-0.12_0.3K.txt'
-    f3 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x15/tAvg_damping0.0004_V-0.18_0.3K.txt'
-    f4 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x20/tAvg_damping0.0004_V-0.25_0.3K.txt'
-    f5 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x25/tAvg_damping0.0004_V-0.32_0.3K.txt'
-    f6 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x30/tAvg_damping0.0004_V-0.38_0.3K.txt'
-    f7 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x35/tAvg_damping0.0004_V-0.45_0.3K.txt'
-    f8 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x40/tAvg_damping0.0004_V-0.52_0.3K.txt'
-    f9 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x45/tAvg_damping0.0004_V-0.58_0.3K.txt'
+    # f1 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x5/tAvg_damping0.0004_V-0.06_0.3K.txt'
+    # f2 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x10/tAvg_damping0.0004_V-0.12_0.3K.txt'
+    # f3 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x15/tAvg_damping0.0004_V-0.18_0.3K.txt'
+    # f4 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x20/tAvg_damping0.0004_V-0.25_0.3K.txt'
+    # f5 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x25/tAvg_damping0.0004_V-0.32_0.3K.txt'
+    # f6 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x30/tAvg_damping0.0004_V-0.38_0.3K.txt'
+    # f7 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x35/tAvg_damping0.0004_V-0.45_0.3K.txt'
+    # f8 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x40/tAvg_damping0.0004_V-0.52_0.3K.txt'
+    # f9 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x45/tAvg_damping0.0004_V-0.58_0.3K.txt'
 
-    l1 = '1'
-    l2 = '2'
-    l3 = '3'
-    l4 = '4'
-    l5 = '5'
-    l6 = '6'
-    l7 = '7'
-    l8 = '8'
-    l9 = '9'
-    l10 ='10'
+    # l1 = '1'
+    # l2 = '2'
+    # l3 = '3'
+    # l4 = '4'
+    # l5 = '5'
+    # l6 = '6'
+    # l7 = '7'
+    # l8 = '8'
+    # l9 = '9'
+    # l10 ='10'
 
     # # # # # title = 'Normalized spin accumulation with/without MEC'
 
-    # f1 = 'AFM/ex+ani/IP/cache/t_avg/3000x50x100/tAvg_damping0.0004_V-3.5_0.3K.txt'
-    # f2 = 'AFM/ex+ani/IP/cache/t_avg/3000x50x100/tAvg_damping0.0004_V-3.5_5K.txt'
+    f1 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x45/tAvg_damping0.0004_V-0.58_0.3K.txt'
+    f2 = 'AFM/ex+ani+hard_axis/IP/cache/t_avg/4000x50x45/tAvg_damping0.0004_V-0.58_0.3K.txt'
     # f3 = 'AFM/ex+ani/IP/cache/t_avg/3000x50x100/tAvg_damping0.0004_V-4.5_10K.txt'
     # f4 = 'AFM/ex+ani/IP/cache/t_avg/3000x50x100/tAvg_damping0.0004_V-4.5_20K.txt'
 
-    # l1 = '0.3'
-    # l2 = '5'
+    l1 = 'Easy axis'
+    l2 = 'Hard axis'
     # l3 = '10'
     # l4 = '20'
 
-    savename = 'AFM/ex+ani/IP/plots/custom/thickness_comparison_constant_Jc_over_d_1.1e8.png'
+    savename = 'AFM/ex+ani+hard_axis/IP/plots/custom/easy_vs_hard_comparison_9layer.png'
 
-    plot_tAvg_comparison([f1,f2,f3,f4,f5,f6,f7,f8,f9], [l1,l2,l3,l4,l5,l6,l7,l8,l9], savename, 'IP')
+    plot_tAvg_comparison([f1,f2], [l1,l2], savename, 'IP')
 
     # plot_dispersion([4000, 50, 5], 4e-4, 1, 'OOP', 'y')
 

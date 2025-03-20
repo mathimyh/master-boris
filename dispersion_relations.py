@@ -60,9 +60,9 @@ def magnon_dispersion(ns, meshdims, cellsize, t, V, damping, MEC, ani, T, type, 
 
     else:
         if type == 'AFM':
-            M = transport.Init_AFM(meshdims, cellsize, damping, MEC, ani, T)
+            M = transport.Init_AFM(meshdims, cellsize, damping, MEC, ani, T, hard_axis)
         elif type == 'FM':
-            M = transport.Init_FM(meshdims, cellsize, damping, MEC, ani, T)
+            M = transport.Init_FM(meshdims, cellsize, damping, MEC, ani, T, hard_axis)
         else:
             print('Choose type!')
             exit()
@@ -93,7 +93,7 @@ def magnon_dispersion(ns, meshdims, cellsize, t, V, damping, MEC, ani, T, type, 
             ns.dp_saveappendasrow(output_filex, int_dir)
         time += time_step
 
-    plotting.plot_magnon_dispersion(meshdims, cellsize, t, V, damping, MEC, ani, T, type, dir, axis, steadystate)
+    plotting.plot_magnon_dispersion(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, dir, axis, steadystate)
 
 def phonon_dispersion(meshdims, cellsize, t, damping, x_start, x_stop, MEC, ani, dir):
 
@@ -263,3 +263,116 @@ def critical_T(ns, meshdims, cellsize, t, damping, MEC, ani, type, max_T):
             f.write(f"{d}\n")
 
     plotting.plot_critical_T(meshdims, damping, MEC, ani, type)
+
+def magnon_dispersion_sinc(ns, meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, dir, axis):
+    int_dir = 0
+
+    if dir == 'x':
+        int_dir = 1
+    elif dir == 'y':
+        int_dir = 2
+    elif dir == 'z':
+        int_dir = 3
+    else:
+        print('Choose direction')
+        exit()
+
+    modules_folder = 'ex+ani'
+    if MEC:
+        modules_folder += 'mec'
+    if hard_axis:
+        modules_folder += '+hard_axis'
+    modules_folder += '/'
+
+    ns.cuda(1)    # ns.selectcudadevice([0,1])
+    ns.reset()
+    
+    modules = ['exchange', 'aniuni']
+    if MEC:
+        modules.append('melastic')
+
+    # Set up the antiferromagnet
+    AFM = ns.AntiFerromagnet(np.array(meshdims)*1e-9, [cellsize*1e-9])
+    AFM.modules(modules)
+    ns.setode('LLG', 'RK4') # No temperature
+    ns.setdt(1e-15)
+
+    # Set parameters. Should possibly just save these in the database really    
+    AFM.param.grel_AFM = 1
+    AFM.param.damping_AFM =  damping
+    AFM.param.Ms_AFM = 2.1e3
+    AFM.param.Nxy = 0
+    AFM.param.A_AFM = 76e-15 # J/m
+    AFM.param.Ah = -460e3 # J/m^3
+    AFM.param.Anh = 0.0
+    AFM.param.J1 = 0
+    AFM.param.J2 = 0
+    if hard_axis:
+        AFM.param.K1_AFM = -21e-3 # J/m^3
+        AFM.param.K2_AFM = 21 # J/m^3
+    else:
+        AFM.param.K1_AFM = 21 # J/m^3
+        AFM.param.K2_AFM = 0
+    AFM.param.K3_AFM = 0
+    AFM.param.cHa = 1
+    # Different anisotropies
+    if ani == 'OOP':
+        AFM.param.ea1 = (0,0,1) # Set it z-direction
+        AFM.setangle(0,90) # Just move m to z-direction, not necessary to wait every time
+    elif ani == 'IP':
+        AFM.param.ea1 = (1,0,0)
+    else:
+        print('Choose anisotropy direction')
+        exit()
+
+    folder_name = type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
+    if not os.path.exists(folder_name):
+        os.makedirs(folder_name)
+
+    Ms = 2.1e3
+
+    output_file = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/sinc_' + 'dir' + dir + '_axis' + axis + 'groundstate' + '_damping' + str(damping) + '_T' + str(T) +  '_dispersion.txt'
+
+    ns.reset()
+
+    time = 0.0
+    ns.cuda(1)
+
+    ns.dp_newfile(output_file)
+
+    AFM.pbc('x', 5)
+
+    equiltime = 0
+    total_time = 2 *t*1e-12
+    H0 = 0
+    He = 500e3
+
+    ns.setstage('Hequation')
+    ns.editstagevalue(0, 'H0', 'He *sinc(kc*(x-Lx/2))*sinc(kc*(y-Ly/2))*sinc(2*PI*fc*(t-t0)),He *sinc(kc*(x-Lx/2))*sinc(kc*(y-Ly/2))*sinc(2*PI*fc*(t-t0))')
+
+    N = 600
+    L = meshdims[0]
+    kc = 2*np.pi*N/(2*L)
+    fc = 5e12
+    time_step = 0.1e-12
+
+    ns.equationconstants('H0', H0)
+    ns.equationconstants('He', He)
+    ns.equationconstants('kc', kc)
+    ns.equationconstants('fc', fc)
+    ns.equationconstants('t0', t)
+
+    while time < total_time:
+        
+        ns.editstagestop(0, 'time', time + time_step)
+        ns.Run()
+
+        # if axis == 'x':
+        ns.dp_getexactprofile((np.array([cellsize/2, 25, meshdims[2]-cellsize])*1e-9), (np.array([meshdims[0] - cellsize/2, 25, meshdims[2]])*1e-9), cellsize*1e-9, 0)
+        # elif axis == 'z':
+        #     ns.dp_getexactprofile((np.array([meshdims[0]/2-cellsize/2, meshdims[1]/2-cellsize/2, meshdims[2]-cellsize/2])*1e-9), (np.array([meshdims[0]/2-cellsize/2, meshdims[1]/2-cellsize/2, 40+cellsize/2])*1e-9), cellsize*1e-9, 0)
+        ns.dp_div(int_dir, Ms)
+        ns.dp_saveappendasrow(output_file, int_dir)
+        time += time_step
+
+    plotting.plot_magnon_dispersion_with_zoom(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, dir, axis, False, True)
