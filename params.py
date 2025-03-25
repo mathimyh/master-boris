@@ -1,0 +1,106 @@
+path = 'C:/Users/mathimyh/master/master-boris/'
+import os
+
+def make_folder(filepath):
+    folder_name = '/'.join(filepath.split('/')[:-1])
+    if not os.path.exists(folder_name):
+        os.makedirs(folder_name)
+
+class Params:
+    
+    def __init__(self, meshdims, cellsize, t, 
+                    V, damping, MEC, ani, T, type,
+                    hard_axis):
+        
+        self.meshdims = meshdims
+        self.cellsize = cellsize
+        self.t = t
+        self.V = V
+        self.damping = damping
+        self.MEC = MEC
+        self.ani = ani
+        self.T = T
+        self.type = type
+        self.hard_axis = hard_axis
+
+        self.modules_folder = 'ex+ani'
+        if MEC:
+            self.modules_folder += '+mec'
+        if hard_axis:
+            self.modules_folder += '+hard_axis'
+        self.modules_folder += '/'
+    
+class TimeAvgSA(Params):
+
+    def __init__(self, meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, x_start, x_stop):
+        super().__init__(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis)
+        self.x_start = x_start
+        self.x_stop = x_stop
+
+    def cachename(self):
+        return 0
+    
+    def plotname(self):
+        return 0
+    
+class Steadystate(Params):
+
+    def __init__(self, meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, x_vals=False):
+        super().__init__(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis)
+        self.x_vals = x_vals
+
+    def simname(self):
+        return path + type + '/' + self.modules_folder + self.ani + '/sims/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/V' + str(self.V) + '_damping' + str(self.damping) + '_' + str(self.T) + 'K_steady_state.bsm'
+
+    def cachename(self):
+        return path + type + '/' + self.modules_folder + self.ani + '/cache/plateau/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/plateau_V'  + str(self.V) + '_damping' + str(self.damping) + '_' + str(self.T) + 'K.txt'
+    
+    def plotname(self):
+        return type + '/' + self.modules_folder + self.ani + '/plots/' + 't_avg/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/tAvg_damping' + str(self.damping) + '_V' + str(self.V) + '_' + str(self.T) + 'K.png'
+    
+class MagnonDispersion(Params):
+
+    def __init__(self, meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, component, axis, steadystate=False, sinc=False):
+        super().__init__(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis)
+        self.component = component
+        self.axis = axis
+        self.steadystate = steadystate
+        self.sinc = sinc
+
+    def simname(self):
+        return path + self.type + '/' + self.modules_folder + self.ani + '/sims/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/V' + str(self.V) + '_damping' + str(self.damping) + '_' + str(self.T) + 'K_steady_state.bsm'
+
+    def cachename(self):
+        if not self.steadystate:
+            if self.sinc:
+                sincstr = 'sinc_'
+            else:
+                sincstr = ''
+            return [path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + sincstr + 'dir' + self.component + '_axis' + self.axis + 'groundstate' + '_damping' + str(self.damping) + '_T' + str(self.T) +  '_dispersion.txt']
+        else:
+            one = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + 'dir' + self.component + '_axis' + self.axis + 'V' + str(self.V) + '_damping' + str(self.damping) + '_T' + str(self.T) + '_y=25_dispersion.txt'
+            two = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + 'dir' + self.component + '_axis' + self.axis + 'V' + str(self.V) + '_damping' + str(self.damping) + '_T' + str(self.T) + '_y=5_dispersion.txt'
+            three = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + 'dir' + self.component + '_axis' + self.axis + 'V' + str(self.V) + '_damping' + str(self.damping) + '_T' + str(self.T) + '_y=45_dispersion.txt'
+            return [one,two,three]
+
+    def plotname(self):
+        if not self.steadystate:
+            if self.sinc:
+                sincstr = 'sinc_'
+            else:
+                sincstr = ''
+            return path + self.type + '/' + self.modules_folder + self.ani + '/plots/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + sincstr + 'dir' + self.component + '_axis' + self.axis + 'groundstate' + '_damping' + str(self.damping) + '_T' + str(self.T) +  '_dispersion.png'
+        else:
+            return path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + 'dir' + self.component + '_axis' + self.axis + 'V' + str(self.V) + '_damping' + str(self.damping) + '_T' + str(self.T) + '_dispersion.png'
+        
+class CriticalT(Params):
+
+    def __init__(self, meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, max_T):
+        super().__init__(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis)
+        self.max_T = max_T
+
+    def cachename(self):
+        return path + self.type + '/' + self.modules_folder + self.ani + '/cache/critical_T/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/critical_T.txt'
+    
+    def plotname(self):
+        return self.type + '/' + self.modules_folder + self.ani + '/plots/critical_T/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/critical_T.png'

@@ -9,65 +9,53 @@ from pathlib import Path
 
 import plotting
 import transport
+import params
 
 path = 'C:/Users/mathimyh/master/master-boris/'
 
-def magnon_dispersion(ns, meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, dir, axis, steadystate = False):
-
-    # # ns = NSClient(); ns.configure(True, False)
+def magnon_dispersion(ns, magnonDispersion):
 
     int_dir = 0
 
-    if dir == 'x':
+    if magnonDispersion.component == 'x':
         int_dir = 1
-    elif dir == 'y':
+    elif magnonDispersion.component == 'y':
         int_dir = 2
-    elif dir == 'z':
+    elif magnonDispersion.component == 'z':
         int_dir = 3
     else:
         print('Choose direction')
         exit()
 
-    modules_folder = 'ex+ani'
-    if MEC:
-        modules_folder += 'mec'
-    if hard_axis:
-        modules_folder += '+hard_axis'
-    modules_folder += '/'
 
-    folder_name = type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
-
-    if type == 'AFM':
+    if magnonDispersion.type == 'AFM':
         time_step = 0.1e-12
-        total_time = t*1e-12
-    elif type == 'FM':
+        total_time = magnonDispersion.t*1e-12
+    elif magnonDispersion.type == 'FM':
         time_step = 1e-12
-        total_time = t*1e-12
+        total_time = magnonDispersion.t*1e-12
 
     Ms = 2.1e3
 
-    y_vals = [25, 5, 45]
+    y_vals = [5, 5, 5]
     
-    if steadystate:
-        sim_name = path + type + '/' + modules_folder + ani + '/sims/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/V' + str(V) + '_damping' + str(damping) + '_' + str(T) + 'K_steady_state.bsm'
+    
+    if magnonDispersion.steadystate:
+        sim_name = magnonDispersion.simname()
         ns.loadsim(sim_name)
-        output_file1 = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'V' + str(V) + '_damping' + str(damping) + '_T' + str(T) + '_y=' + str(y_vals[0]) + '_dispersion.txt'
-        output_file2 = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'V' + str(V) + '_damping' + str(damping) + '_T' + str(T) + '_y=' + str(y_vals[1]) + '_dispersion.txt'
-        output_file3 = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'V' + str(V) + '_damping' + str(damping) + '_T' + str(T) + '_y=' + str(y_vals[2]) + '_dispersion.txt'
-        output_files = [output_file1, output_file2, output_file3]
-
+        y_vals = [5,25,45]
+    
     else:
-        if type == 'AFM':
-            M = transport.Init_AFM(meshdims, cellsize, damping, MEC, ani, T, hard_axis)
-        elif type == 'FM':
-            M = transport.Init_FM(meshdims, cellsize, damping, MEC, ani, T, hard_axis)
+        if magnonDispersion.type == 'AFM':
+            M = transport.Init_AFM(ns, magnonDispersion)
+        elif magnonDispersion.type == 'FM':
+            M = transport.Init_FM(magnonDispersion)
         else:
             print('Choose type!')
             exit()
-        output_file = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'groundstate' + '_damping' + str(damping) + '_T' + str(T) +  '_dispersion.txt'
-        output_files = [output_file]
+
+    output_files = magnonDispersion.cachename()
+    params.make_folder(output_files[0])
 
     ns.reset()
 
@@ -79,21 +67,20 @@ def magnon_dispersion(ns, meshdims, cellsize, t, V, damping, MEC, ani, T, type, 
 
     while time < total_time:
         
-        if steadystate:
-            ns.V([0.001*V, 'time', time + time_step])
+        if magnonDispersion.steadystate:
+            ns.V([0.001*magnonDispersion.V, 'time', time + time_step])
         else:
             ns.Relax(['time', time + time_step])
         
         for i, output_filex in enumerate(output_files):
             # if axis == 'x':
-            ns.dp_getexactprofile((np.array([cellsize/2, y_vals[i], meshdims[2]-cellsize])*1e-9), (np.array([meshdims[0] - cellsize/2, y_vals[i], meshdims[2]])*1e-9), cellsize*1e-9, 0)
-            # elif axis == 'z':
-            #     ns.dp_getexactprofile((np.array([meshdims[0]/2-cellsize/2, meshdims[1]/2-cellsize/2, meshdims[2]-cellsize/2])*1e-9), (np.array([meshdims[0]/2-cellsize/2, meshdims[1]/2-cellsize/2, 40+cellsize/2])*1e-9), cellsize*1e-9, 0)
+            ns.dp_getexactprofile((np.array([magnonDispersion.cellsize/2, y_vals[i], magnonDispersion.meshdims[2]-magnonDispersion.cellsize])*1e-9), (np.array([magnonDispersion.meshdims[0] - magnonDispersion.cellsize/2, y_vals[i], magnonDispersion.meshdims[2]])*1e-9), magnonDispersion.cellsize*1e-9, 0)
             ns.dp_div(int_dir, Ms)
+            # elif axis == 'z':
             ns.dp_saveappendasrow(output_filex, int_dir)
         time += time_step
 
-    plotting.plot_magnon_dispersion(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, dir, axis, steadystate)
+    plotting.plot_magnon_dispersion(magnonDispersion)
 
 def phonon_dispersion(meshdims, cellsize, t, damping, x_start, x_stop, MEC, ani, dir):
 
@@ -203,22 +190,14 @@ def trajectory(meshdims, t, damping, x_start, x_stop, MEC, ani, dir):
 
     plotting.plot_trajectory(meshdims, damping, MEC, ani, dir)
 
-def critical_T(ns, meshdims, cellsize, t, damping, MEC, ani, type, max_T):
-    modules_folder = 'ex+ani'
-    if MEC:
-        modules_folder += 'mec'
-    modules_folder += '/'
+def critical_T(ns, criticalT):
     
-    folder_name = type + '/' + modules_folder + ani + '/cache/critical_T/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
-    
-    if type == 'AFM':
-        M = transport.Init_AFM(meshdims, cellsize, damping, MEC, ani, 0)
-        measuring_t = 10e-12
+    if criticalT.type == 'AFM':
+        M = transport.Init_AFM(criticalT)
+        measuring_t = 5e-12
         step_t = 40e-12
-    elif type == 'FM':
-        M = transport.Init_FM(meshdims, cellsize, damping, MEC, ani, 0)
+    elif criticalT.type == 'FM':
+        M = transport.Init_FM(criticalT)
         measuring_t = 100e-12
         step_t = 400e-12
     else:
@@ -233,19 +212,19 @@ def critical_T(ns, meshdims, cellsize, t, damping, MEC, ani, type, max_T):
     # ns.adddata('<M2>', type, np.array([0,0,0,meshdims[0],meshdims[1],meshdims[2]])*1e-9) # average magnetization of whole mesh (M2 because I want positive values)
     # ns.editdatasave(0, 'time', (t*1e-12)/500) # 10 times for each step, then average over these
 
-    output_file = path + type + '/' + modules_folder + ani + '/cache/critical_T/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/critical_T.txt'
-
+    output_file = criticalT.cachename() 
+    params.make_folder(output_file)
     data = []
 
     avs = 20
 
     # Increase temperature over time 
-    for i in range(max_T):
+    for i in range(criticalT.max_T):
         ns.temperature(i)
         ns.Relax(['time', step_t])
         m = [0,0,0]
         for j in range(avs):
-            temp = ns.showdata('<M>', type, np.array([0,0,0,meshdims[0],meshdims[1],meshdims[2]])*1e-9)
+            temp = ns.showdata('<M>', type, np.array([0,0,0,criticalT.meshdims[0],criticalT.meshdims[1],criticalT.meshdims[2]])*1e-9)
             m[0] += temp[0]
             m[1] += temp[1]
             m[2] += temp[2]
@@ -262,7 +241,7 @@ def critical_T(ns, meshdims, cellsize, t, damping, MEC, ani, type, max_T):
         for d in data:
             f.write(f"{d}\n")
 
-    plotting.plot_critical_T(meshdims, damping, MEC, ani, type)
+    plotting.plot_critical_T(criticalT)
 
 def magnon_dispersion_sinc(ns, meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, dir, axis):
     int_dir = 0

@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from textwrap import wrap
 import os
+import params
 from itertools import chain
 from scipy.optimize import curve_fit
 from scipy.fft import fft, fftfreq
@@ -877,149 +878,87 @@ def plot_tAvg_comparison(plots, legends, savename, ani):
     plt.savefig(savename, dpi=600)
     plt.show()
 
-def plot_magnon_dispersion_with_zoom(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, dir, axis, steadystate = False, sinc=False, clim_max = 1000):
+def plot_magnon_dispersion_with_zoom(magnonDispersion, clim_max = 1000):
 
     modules_folder = 'ex+ani'
-    if MEC:
+    if magnonDispersion.MEC:
         modules_folder += '+mec'
-    if hard_axis:
+    if magnonDispersion.hard_axis:
         modules_folder += '+hard_axis'
     modules_folder += '/'
 
-    if type == 'AFM':
+    if magnonDispersion.type == 'AFM':
         time_step = 0.1e-12
         ylabel = 'f (THz)'
         divisor = 1e12
-    elif type == 'FM':
+    elif magnonDispersion.type == 'FM':
         time_step = 1e-12
         ylabel = 'f (GHz)'
         divisor = 1e9
+    
+    
+    output_file = magnonDispersion.cachename()[0]
+    savename = magnonDispersion.plotname()
 
+    pos_time = np.loadtxt(output_file)
 
-    if steadystate:
-        output_file1 = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'V' + str(V) + '_damping' + str(damping) + '_T' + str(T) + '_y=5_dispersion.txt'
-        output_file2 = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'V' + str(V) + '_damping' + str(damping) + '_T' + str(T) + '_y=25_dispersion.txt'
-        output_file3 = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'V' + str(V) + '_damping' + str(damping) + '_T' + str(T) + '_y=45_dispersion.txt'
-        output_files = [output_file1, output_file2, output_file3]
-        savename = type + '/' + modules_folder + ani + '/plots/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'V' + str(V) + '_damping' + str(damping) + '_T' + str(T) +  '_dispersion.png'
-        
-        fig, ax = plt.subplots(1,3)
+    fourier_data = np.fft.fftshift(np.abs(np.fft.fft2(pos_time)))
 
-        fig.set_figheight(5)
-        fig.set_figwidth(16)
-        yvals =[5,25,45]
-        
-        for i, output_filex in enumerate(output_files):
-            
-            pos_time = np.loadtxt(output_filex)
+    freq_len = len(fourier_data)
+    k_len = len(fourier_data[0])
+    freq = np.fft.fftfreq(freq_len, time_step)
+    kvector = np.fft.fftfreq(k_len, 5e-9)
 
-            fourier_data = np.fft.fftshift(np.abs(np.fft.fft2(pos_time)))
+    k_max = 2*np.pi*kvector[int(0.5 * len(kvector))]*5e-9
+    f_min = np.abs(freq[0])
+    f_max = np.abs(freq[int(0.5 * len(freq))])/divisor # to make it THz
+    f_points = int(0.5 * freq_len)
 
-            freq_len = len(fourier_data)
-            k_len = len(fourier_data[0])
-            freq = np.fft.fftfreq(freq_len, time_step)
-            kvector = np.fft.fftfreq(k_len, 5e-9)
+    final_result = [fourier_data[i] for i in range(int(0.5 *freq_len),freq_len)]
 
-            k_max = 2*np.pi*kvector[int(0.5 * len(kvector))]*5e-9
-            f_min = np.abs(freq[0])
-            f_max = np.abs(freq[int(0.5 * len(freq))])/divisor # THz for FM and GHz for FM
-            f_points = int(0.5 * freq_len)
+    fig1,ax1 = plt.subplots()
 
-            result = [fourier_data[i] for i in range(int(0.5 *freq_len),freq_len)]
+    ax1.imshow(final_result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
 
-            ax[i].imshow(result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
+    label = 'q' + magnonDispersion.axis
 
-            label = 'q' + axis
+    ax1.set_xlabel(label)
+    ax1.set_ylabel(ylabel)
+    # ax1.set_ylim(0, 0.1)
 
-            ax[i].set_xlabel(label)
-            ax[i].set_ylabel(ylabel)
-            # ax1.set_ylim(0, 0.1)
-            title = r'y = ' + str(yvals[i]*1e-3) + ' $\mu$m'
-            ax[i].title.set_text(title)
+    plt.tight_layout()
 
-        folder_name = type + '/' + modules_folder + ani + '/plots/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
-        if not os.path.exists(folder_name):
-            os.makedirs(folder_name)
+    folder_name = '/'.join(savename.split('/')[:-1])
+    if not os.path.exists(folder_name):
+        os.makedirs(folder_name)
 
-        plt.tight_layout()
+    x1, x2, y1, y2 = -0.25, 0.25, 0, 0.5
+    axins = ax1.inset_axes(
+        [0.5, 0.5, 0.47, 0.47],
+        xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
+    axins.imshow(final_result, extent = [-k_max, k_max,f_min, f_max], origin='lower')
 
-    else:
-        if sinc:
-            sincstr = 'sinc_'
-        else:
-            sincstr = ''
-        output_file = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + sincstr + 'dir' + dir + '_axis' + axis + 'groundstate' + '_damping' + str(damping) + '_T' + str(T) +  '_dispersion.txt'
-        savename = type + '/' + modules_folder + ani + '/plots/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + sincstr + 'dir' + dir + '_axis' + axis + 'groundstate' + '_damping' + str(damping) + '_T' + str(T) +  '_dispersion.png'
-
-        pos_time = np.loadtxt(output_file)
-
-        fourier_data = np.fft.fftshift(np.abs(np.fft.fft2(pos_time)))
-
-        freq_len = len(fourier_data)
-        k_len = len(fourier_data[0])
-        freq = np.fft.fftfreq(freq_len, time_step)
-        kvector = np.fft.fftfreq(k_len, 5e-9)
-
-        k_max = 2*np.pi*kvector[int(0.5 * len(kvector))]*5e-9
-        f_min = np.abs(freq[0])
-        f_max = np.abs(freq[int(0.5 * len(freq))])/divisor # to make it THz
-        f_points = int(0.5 * freq_len)
-
-        result = [fourier_data[i] for i in range(int(0.5 *freq_len),freq_len)]
-
-        fig1,ax1 = plt.subplots()
-
-        ax1.imshow(result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
-
-        label = 'q' + dir
-
-        ax1.set_xlabel(label)
-        ax1.set_ylabel(ylabel)
-        # ax1.set_ylim(0, 0.1)
-
-        plt.tight_layout()
-
-        folder_name = type + '/' + modules_folder + ani + '/plots/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
-        if not os.path.exists(folder_name):
-            os.makedirs(folder_name)
-
-        x1, x2, y1, y2 = -0.1, 0.1, 0, 0.2
-        axins = ax1.inset_axes(
-            [0.5, 0.5, 0.47, 0.47],
-            xlim=(x1,x2), ylim=(y1,y2), xticklabels=[], yticklabels=[])
-        axins.imshow(result, extent = [-k_max, k_max,f_min, f_max], origin='lower')
-
-        ax1.indicate_inset_zoom(axins, edgecolor='black')
+    ax1.indicate_inset_zoom(axins, edgecolor='black')
 
     plt.savefig(savename, dpi=600)
 
     plt.show()
 
-def plot_magnon_dispersion(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, dir, axis, steadystate = False, clim_max = 1000):
+def plot_magnon_dispersion(magnonDispersion, clim_max = 1000):
 
-    modules_folder = 'ex+ani'
-    if MEC:
-        modules_folder += '+mec'
-    if hard_axis:
-        modules_folder += '+hard_axis'
-    modules_folder += '/'
-
-    if type == 'AFM':
+    if magnonDispersion.type == 'AFM':
         time_step = 0.1e-12
         ylabel = 'f (THz)'
         divisor = 1e12
-    elif type == 'FM':
+    elif magnonDispersion.type == 'FM':
         time_step = 1e-12
         ylabel = 'f (GHz)'
         divisor = 1e9
 
 
-    if steadystate:
-        output_file1 = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'V' + str(V) + '_damping' + str(damping) + '_T' + str(T) + '_y=5_dispersion.txt'
-        output_file2 = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'V' + str(V) + '_damping' + str(damping) + '_T' + str(T) + '_y=25_dispersion.txt'
-        output_file3 = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'V' + str(V) + '_damping' + str(damping) + '_T' + str(T) + '_y=45_dispersion.txt'
-        output_files = [output_file1, output_file2, output_file3]
-        savename = type + '/' + modules_folder + ani + '/plots/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'V' + str(V) + '_damping' + str(damping) + '_T' + str(T) +  '_dispersion.png'
+    if magnonDispersion.steadystate:
+        output_files = magnonDispersion.cachename()
+        savename = magnonDispersion.plotname()
         
         fig, ax = plt.subplots(1,3)
 
@@ -1047,7 +986,7 @@ def plot_magnon_dispersion(meshdims, cellsize, t, V, damping, MEC, ani, T, type,
 
             ax[i].imshow(result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
 
-            label = 'q' + axis
+            label = 'q' + magnonDispersion.axis
 
             ax[i].set_xlabel(label)
             ax[i].set_ylabel(ylabel)
@@ -1055,15 +994,67 @@ def plot_magnon_dispersion(meshdims, cellsize, t, V, damping, MEC, ani, T, type,
             title = r'y = ' + str(yvals[i]*1e-3) + ' $\mu$m'
             ax[i].title.set_text(title)
 
-        folder_name = type + '/' + modules_folder + ani + '/plots/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
+        folder_name = '/'.join(savename.split('/')[:-2])
         if not os.path.exists(folder_name):
             os.makedirs(folder_name)
 
         plt.tight_layout()
 
+    elif magnonDispersion.hard_axis:
+        
+        output_files = magnonDispersion.cachename()
+        savename = magnonDispersion.plotname()
+        
+        fig, ax = plt.subplots()
+
+        fig.set_figheight(5)
+        fig.set_figwidth(5)
+        yvals =[5,25,45]
+
+        results = []
+        
+        for i, output_filex in enumerate(output_files):
+            
+            pos_time = np.loadtxt(output_filex)
+
+            fourier_data = np.fft.fftshift(np.abs(np.fft.fft2(pos_time)))
+
+            freq_len = len(fourier_data)
+            k_len = len(fourier_data[0])
+            freq = np.fft.fftfreq(freq_len, time_step)
+            kvector = np.fft.fftfreq(k_len, 5e-9)
+
+            k_max = 2*np.pi*kvector[int(0.5 * len(kvector))]*5e-9
+            f_min = np.abs(freq[0])
+            f_max = np.abs(freq[int(0.5 * len(freq))])/divisor # THz for FM and GHz for FM
+            f_points = int(0.5 * freq_len)
+
+            result = [fourier_data[i] for i in range(int(0.5 *freq_len),freq_len)]
+
+            results.append(result)
+
+        final_result = results[0]
+
+        
+
+        ax.imshow(final_result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
+
+        label = 'q' + magnonDispersion.axis
+
+        ax.set_xlabel(label)
+        ax.set_ylabel(ylabel)
+        # ax1.set_ylim(0, 0.1)
+
+        folder_name = '/'.join(savename.split('/')[:-1])
+        if not os.path.exists(folder_name):
+            os.makedirs(folder_name)
+
+        plt.tight_layout()
+    
+    
     else:
-        output_file = path + type + '/' + modules_folder + ani + '/cache/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'groundstate' + '_damping' + str(damping) + '_T' + str(T) +  '_dispersion.txt'
-        savename = type + '/' + modules_folder + ani + '/plots/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/' + 'dir' + dir + '_axis' + axis + 'groundstate' + '_damping' + str(damping) + '_T' + str(T) +  '_dispersion.png'
+        output_file = magnonDispersion.cachename()[0]
+        savename = magnonDispersion.plotname()
 
         pos_time = np.loadtxt(output_file)
 
@@ -1085,7 +1076,7 @@ def plot_magnon_dispersion(meshdims, cellsize, t, V, damping, MEC, ani, T, type,
 
         ax1.imshow(result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
 
-        label = 'q' + dir
+        label = 'q' + magnonDispersion.axis
 
         ax1.set_xlabel(label)
         ax1.set_ylabel(ylabel)
@@ -1093,14 +1084,13 @@ def plot_magnon_dispersion(meshdims, cellsize, t, V, damping, MEC, ani, T, type,
 
         plt.tight_layout()
 
-        folder_name = type + '/' + modules_folder + ani + '/plots/dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
+        folder_name = '/'.join(savename.split('/')[:-1])
         if not os.path.exists(folder_name):
             os.makedirs(folder_name)
 
-
     plt.savefig(savename, dpi=600)
 
-    # plt.show()
+    plt.show()
 
 def plot_phonon_dispersion(meshdims, damping, MEC, ani, dir,time_step):
 
@@ -1307,16 +1297,11 @@ def plot_trajectory(meshdims, damping, MEC, ani, dir):
     plt.savefig(savename, dpi=600)
     plt.show()
 
-def plot_critical_T(meshdims, damping, MEC, ani, type):
+def plot_critical_T(criticalT):
 
     plt.figure(figsize=(10,6))
 
-    modules_folder = 'ex+ani'
-    if MEC:
-        modules_folder += 'mec'
-    modules_folder += '/'
-
-    output_file = path + type + '/' + modules_folder + ani + '/cache/critical_T/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/critical_T.txt'
+    output_file = criticalT.cachename()
 
     f = open(output_file, 'r')
 
@@ -1336,21 +1321,17 @@ def plot_critical_T(meshdims, damping, MEC, ani, type):
         
     ys = [abs(y) for y in ys]
     max_y = max(ys)
-    # if max_y > 0:
     ys = [y/max_y for y in ys]
 
     plt.plot(xs, ys, linewidth=3)
 
-    folder_name = type + '/' + modules_folder + ani + '/plots/critical_T/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
-
-    savename = type + '/' + modules_folder + ani + '/plots/critical_T/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) +  '/critical_T.png'
+    savename = criticalT.plotname()
+    params.make_folder(savename)
     plt.xlabel(r'Temperature ($K$)')
     plt.ylabel(r'|${m}_{x}$|')
     plt.tight_layout()
     plt.savefig(savename, dpi=600)
-    plt.show()
+    # plt.show()
 
 def plot_diffusion_length(plots, ts, savename, ani):
     
