@@ -72,25 +72,15 @@ def Init_AFM(ns, params):
         AFM.param.mdamping = 1e15 # Should probably be lower than this 
 
     
-    # Relax for 1 ps to get some fluctuations
-    ns.Relax(['time', 1e-12])
+    # Relax for 10 ps to get some fluctuations
+    ns.Relax(['time', 10e-12])
 
     # Return the mesh, ready for simulations
     return AFM
 
 # Initializes a FM mesh with same parameters as AFM. Returns the mesh
-def Init_FM(params):
+def Init_FM(ns, params):
 
-    # Folder system
-    modules_folder = 'ex+ani'
-    if params.MEC:
-        modules_folder += '+mec'
-    modules_folder += '/'
-
-    ns = NSClient(); ns.configure(True, False)
-    ns.cuda(1)
-    # ns.selectcudadevice([0,1])
-    ns.reset()
     ns.iterupdate(200)
     
     modules = ['exchange', 'aniuni']
@@ -148,18 +138,16 @@ def Init_FM(params):
     ns.Relax(['time', 1000e-12])
 
     # Return the mesh, ready for simulations
-    sim_name = path + 'FM/' + modules_folder + params.ani + '/sims/' +  str(params.meshdims[0]) + 'x' + str(params.meshdims[1]) + 'x' + str(params.meshdims[2]) + '/ground_state.bsm'
-    ns.savesim(sim_name)
+    # sim_name = path + 'FM/' + modules_folder + params.ani + '/sims/' +  str(params.meshdims[0]) + 'x' + str(params.meshdims[1]) + 'x' + str(params.meshdims[2]) + '/ground_state.bsm'
+    # ns.savesim(sim_name)
     return FM
 
 # Sets up a simulation with a virtual current
-def virtual_current(params):
-
-    ns = NSClient(); ns.configure(True, False)
+def virtual_current(ns, params):
     
     # Retrieve the desired mesh
     if params.type == 'AFM':
-        M = Init_AFM(params)
+        M = Init_AFM(ns, params)
     elif params.type == 'FM':
         M = Init_FM(params)
     else:
@@ -224,37 +212,32 @@ def virtual_current(params):
 # Can plot magnetization at x_vals to find plateau 
 def save_steadystate(ns, steadystate):
 
-    M = virtual_current(steadystate)
+    M = virtual_current(ns, steadystate)
     ns.iterupdate(200)
 
-    savename = path + type + '/' + modules_folder + ani + '/sims/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/V' + str(V) + '_damping' + str(damping) + '_' + str(T) + 'K_steady_state.bsm'
-    folder_name2 = type + '/' + modules_folder + ani + '/sims/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
-    if not os.path.exists(folder_name2):
-            os.makedirs(folder_name2)
+    savename = steadystate.simname()
+    params.make_folder(savename)
 
     # Run the simulation while also saving <mxdmdt> at x_vals every 5ps
-    if params.x_vals != False:
+    if steadystate.x_vals != False:
 
-        filename = path + type + '/' + modules_folder + ani + '/cache/plateau/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/plateau_V'  + str(V) + '_damping' + str(damping) + '_' + str(T) + 'K.txt'
+        filename = steadystate.cachename()
+        params.make_folder(filename)
         
-        folder_name = type + '/' + modules_folder + ani + '/cache/plateau/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
-        if not os.path.exists(folder_name):
-            os.makedirs(folder_name)
-
         data = ['time']
 
-        for x_val in x_vals:
-            data.append(['<mxdmdt>', M, np.array([x_val, 0, meshdims[2], x_val + 1, meshdims[1], meshdims[2]]) * 1e-9])
+        for x_val in steadystate.x_vals:
+            data.append(['<mxdmdt>', M, np.array([x_val, 0, steadystate.meshdims[2], x_val + 1, steadystate.meshdims[1], steadystate.meshdims[2]]) * 1e-9])
             
         ns.setsavedata(filename, *data)
 
-        ns.V([0.001*V, 'time', t*1e-12, 'time', 5e-12])
+        ns.V([0.001*steadystate.V, 'time', steadystate.t*1e-12, 'time', 5e-12])
         ns.savesim(savename)
-        plotting.plot_plateau(meshdims, V, damping, x_vals, MEC, ani, T, type, hard_axis)
+        plotting.plot_plateau(steadystate)
 
     # Just run the simulation
     else:
-        ns.V([0.001*V, 'time', t*1e-12])
+        ns.V([0.001*steadystate.V, 'time', steadystate.t*1e-12])
         ns.savesim(savename)
 
 def save_steadystate2(ns, steadystate):
@@ -462,47 +445,33 @@ def current_density(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_a
     # plotting.plot_current_density(meshdims, cellsize, t, V, damping, MEC, ani, T, type)
     
 # Loads a simulation in steady state, runs the simulation and saves time and <mxdmdt> along the x-axis
-def time_avg_SA(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, x_start, x_stop):
-
-    modules_folder = 'ex+ani'
-    if MEC:
-        modules_folder = '+mec'
-    if hard_axis:
-        modules_folder += '+hard_axis'
-    modules_folder += '/'
-
-    folder_name = type + '/' + modules_folder + ani + '/cache/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
+def time_avg_SA(ns, timeAvgSA):
 
 
-    # sim_name = 'C:/Users/mathimyh/documents/boris data/simulations/boris_fordypningsoppgave/' + ani + '/sims/' + mec_folder + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/V' + str(V) + '_damping' + str(damping) + '_steady_state.bsm'
-    sim_name = path + type + '/' + modules_folder + ani + '/sims/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/V' + str(V) + '_damping' + str(damping) + '_' + str(T) + 'K_steady_state.bsm'
-
-    ns = NSClient(); ns.configure(True, False)
-    ns.reset()
+    sim_name = timeAvgSA.simname()
     
     # Loading the sim. All the parameters and parameters variation is still there so don't need to add back
     ns.loadsim(sim_name)
     ns.reset()
 
     ns.setdata('time')
-    for i in range(int((x_stop - x_start)/cellsize)):
-        temp = np.array([x_start + (1*i*cellsize), 0, meshdims[2], x_start + (1 + i)*cellsize, meshdims[1], meshdims[2]]) * 1e-9 # Only measure at the top
+    for i in range(int((timeAvgSA.x_stop - timeAvgSA.x_start)/timeAvgSA.cellsize)):
+        temp = np.array([timeAvgSA.x_start + (1*i*timeAvgSA.cellsize), 0, timeAvgSA.meshdims[2], 
+                         timeAvgSA.x_start + (1 + i)*timeAvgSA.cellsize, timeAvgSA.meshdims[1], timeAvgSA.meshdims[2]]) * 1e-9 # Only measure at the top
         ns.adddata('<mxdmdt>', type, temp)
 
-    savename = path + type + '/' + modules_folder + ani + '/cache/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/tAvg_damping' + str(damping) + '_V' + str(V) + '_' + str(T) + 'K.txt'
-
+    savename = timeAvgSA.cachename()
+    params.make_folder(savename)
     ns.savedatafile(savename)
 
     # ns.cuda(1)
 
     # Voltage stage
-    ns.V([0.001*V, 'time', t*1e-12, 'time', t*1e-12 / 200])
+    ns.V([0.001*timeAvgSA.V, 'time', timeAvgSA.t*1e-12, 'time', timeAvgSA.t*1e-12 / 200])
 
     # ns.Run()
 
-    plotting.plot_tAvg_SA(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, x_start, x_stop)
+    plotting.plot_tAvg_SA(timeAvgSA)
  
 # Save 2D magnetization
 def time_avg_SA_2D(meshdims, cellsize, t, V, damping, data, x_start, x_stop, MEC, ani):

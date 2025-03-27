@@ -80,25 +80,15 @@ def SA_plotting(filename, plotname, title):
     # plotname = "plots/" + plotname
     # plt.savefig(plotname, dpi=500)
 
-def plot_plateau(meshdims, V, damping, x_vals, MEC, ani, T, type, hard_axis):
+def plot_plateau(steadystate):
 
-    modules_folder = 'ex+ani'
-    if MEC:
-        modules_folder += '+mec'
-    if hard_axis:
-        modules_folder += '+hard_axis'
-    modules_folder += '/'
-
-    folder_name = type + '/' + modules_folder + ani + '/plots/plateau/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
-    print(folder_name)
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
-
-
-    filename = type + '/' + modules_folder + ani + '/cache/plateau/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/plateau_V'  + str(V) + '_damping' + str(damping) + '_' + str(T) + 'K.txt'
+    filename = steadystate.cachename()
     f = open(filename, 'r')
 
     lines = f.readlines()
+    skip = False
+    if lines[7][0] == 's':
+        skip = True
     lines = lines[11:]
 
     indexer = 0
@@ -109,7 +99,7 @@ def plot_plateau(meshdims, V, damping, x_vals, MEC, ani, T, type, hard_axis):
     fig.set_figwidth(14)
 
     direction = 1
-    if ani == 'OOP':
+    if steadystate.ani == 'OOP':
         direction = 3
 
     for i in range(direction, len(lines[0].split('\t'))-3, 3):
@@ -118,12 +108,12 @@ def plot_plateau(meshdims, V, damping, x_vals, MEC, ani, T, type, hard_axis):
 
         for line in lines:
             vec = line.split('\t')
-            if lines[7][0] == 's':
+            if skip:
                 vec = vec[3:]
             ts.append(float(vec[0])*1e12)
             vals.append(float(vec[i]))
 
-        text = str(x_vals[indexer]) + 'nm'
+        text = str(steadystate.x_vals[indexer]) + 'nm'
         if indexer == 0:
             ax[0][0].plot(ts, vals)
             ax[0][0].title.set_text(text)
@@ -146,29 +136,19 @@ def plot_plateau(meshdims, V, damping, x_vals, MEC, ani, T, type, hard_axis):
         indexer += 1
 
 
-    plotname = type + '/' + modules_folder + ani + '/plots/plateau/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/plateau_V'  + str(V) + '_damping' + str(damping) + '_' + str(T) + 'K.png'
+    plotname = steadystate.plotname()
+    params.make_folder(plotname)
     fig.suptitle('<mxdmdt> over time')
     fig.tight_layout()
     fig.savefig(plotname, dpi=600)
     plt.show()
 
-def plot_tAvg_SA(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, x_start, x_stop):
+def plot_tAvg_SA(timeAvgSA):
 
     plt.figure(figsize=(10, 7))
 
-    modules_folder = 'ex+ani'
-    if MEC:
-        modules_folder += '+mec'
-    if hard_axis:
-        modules_folder += '+hard_axis'
-    modules_folder += '/'
-
-    folder_name = type + '/' + modules_folder + ani + '/plots/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
-
-    filename = type + '/' + modules_folder + ani + '/cache/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/tAvg_damping' + str(damping) + '_V' + str(V) + '_' + str(T) + 'K.txt'
-    filename_2D = type + '/' + modules_folder + ani + '/cache/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/2D_tAvg_damping' + str(damping) + '_V' + str(V) + '_' + str(T) + 'K.txt'
+    filename = timeAvgSA.cachename()
+    # filename_2D = type + '/' + modules_folder + ani + '/cache/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/2D_tAvg_damping' + str(damping) + '_V' + str(V) + '_' + str(T) + 'K.txt'
 
     if os.path.isfile(filename):
         f = open(filename, 'r')
@@ -176,7 +156,7 @@ def plot_tAvg_SA(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis
         lines = f.readlines()
         lines = lines[10:]
 
-        xs = np.linspace(x_start/1000, x_stop/1000, int((x_stop - x_start)/cellsize))
+        xs = np.linspace(timeAvgSA.x_start/1000, timeAvgSA.x_stop/1000, int((timeAvgSA.x_stop - timeAvgSA.x_start)/timeAvgSA.cellsize))
 
         vals = []
 
@@ -184,7 +164,7 @@ def plot_tAvg_SA(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis
         for line in lines:
             # This is the component we look at. In plane means x-component (0) and out-of-plane means z (2)
             direction = 0
-            if ani == 'OOP':
+            if timeAvgSA.ani == 'OOP':
                 direction = 2
             vec = line.split('\t')
             all_vals = vec[1:]
@@ -204,49 +184,49 @@ def plot_tAvg_SA(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis
             val /= len(vals)
             ys.append(val)
 
-    elif os.path.isfile(filename_2D):
-        f = open(filename_2D, 'r')
+    # elif os.path.isfile(filename_2D):
+    #     f = open(filename_2D, 'r')
 
-        lines = f.readlines()
-        lines = lines[10:]
+    #     lines = f.readlines()
+    #     lines = lines[10:]
 
-        # Turn the raw data into a list of numpy arrays. Every entry in the arrays are floats.
-        raw_data = []
-        for line in lines:
+    #     # Turn the raw data into a list of numpy arrays. Every entry in the arrays are floats.
+    #     raw_data = []
+    #     for line in lines:
 
-            # Make a list of all entries and an empty array to fill only the component we want in
-            vec = line.strip().split('\t')[1:]
-            temp = np.empty(int(len(vec)/3))
+    #         # Make a list of all entries and an empty array to fill only the component we want in
+    #         vec = line.strip().split('\t')[1:]
+    #         temp = np.empty(int(len(vec)/3))
 
-            # This is the component we look at. In plane means x-component (0) and out-of-plane means z (2)
-            direction = 0
-            if ani == 'OOP':
-                direction = 2
+    #         # This is the component we look at. In plane means x-component (0) and out-of-plane means z (2)
+    #         direction = 0
+    #         if ani == 'OOP':
+    #             direction = 2
 
-            # Iterate over all and add only the component we want. Convert to float
-            indexer = 0
-            while direction < len(vec):
-                temp[indexer] = float(vec[direction])
-                indexer += 1
-                direction += 3
+    #         # Iterate over all and add only the component we want. Convert to float
+    #         indexer = 0
+    #         while direction < len(vec):
+    #             temp[indexer] = float(vec[direction])
+    #             indexer += 1
+    #             direction += 3
 
-            # Reshape to 2D array and add to the data list
-            raw_data.append(temp.reshape(meshdims[2], int(len(temp)/(meshdims[2]))))
+    #         # Reshape to 2D array and add to the data list
+    #         raw_data.append(temp.reshape(meshdims[2], int(len(temp)/(meshdims[2]))))
 
-        # Now find the time averages for all the data
-        tAvg_data = np.zeros_like(raw_data[0])
+    #     # Now find the time averages for all the data
+    #     tAvg_data = np.zeros_like(raw_data[0])
 
-        for k, matrix in enumerate(raw_data):
-            for i, row in enumerate(matrix):
-                for j, col in enumerate(row):
-                    tAvg_data[i][j] += col
-                    if k == len(raw_data)-1:
-                        tAvg_data[i][j] /= len(raw_data)
+    #     for k, matrix in enumerate(raw_data):
+    #         for i, row in enumerate(matrix):
+    #             for j, col in enumerate(row):
+    #                 tAvg_data[i][j] += col
+    #                 if k == len(raw_data)-1:
+    #                     tAvg_data[i][j] /= len(raw_data)
 
 
         
-        ys = [tAvg_data[0][i] for i in range(len(tAvg_data[0]))]
-        xs = np.linspace(x_start, x_stop/1000, len(ys))
+    #     ys = [tAvg_data[0][i] for i in range(len(tAvg_data[0]))]
+    #     xs = np.linspace(x_start, x_stop/1000, len(ys))
 
     else:
         print("No simulations have been done with these params")
@@ -257,7 +237,8 @@ def plot_tAvg_SA(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis
     plt.ylabel(r'$\mu_x$')
     plt.tight_layout()
 
-    plotname = type + '/' + modules_folder + ani + '/plots/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/tAvg_damping' + str(damping) + '_V' + str(V) + '_' + str(T) + 'K.png'
+    plotname = timeAvgSA.plotname()
+    params.make_folder(plotname)
     plt.savefig(plotname, dpi=600)
     # plt.show()
 
@@ -880,13 +861,6 @@ def plot_tAvg_comparison(plots, legends, savename, ani):
 
 def plot_magnon_dispersion_with_zoom(magnonDispersion, clim_max = 1000):
 
-    modules_folder = 'ex+ani'
-    if magnonDispersion.MEC:
-        modules_folder += '+mec'
-    if magnonDispersion.hard_axis:
-        modules_folder += '+hard_axis'
-    modules_folder += '/'
-
     if magnonDispersion.type == 'AFM':
         time_step = 0.1e-12
         ylabel = 'f (THz)'
@@ -895,50 +869,75 @@ def plot_magnon_dispersion_with_zoom(magnonDispersion, clim_max = 1000):
         time_step = 1e-12
         ylabel = 'f (GHz)'
         divisor = 1e9
+    else:
+        raise Exception('Choose type!')
     
     
-    output_file = magnonDispersion.cachename()[0]
+    output_files = magnonDispersion.cachename()
     savename = magnonDispersion.plotname()
+    params.make_folder(savename)
 
-    pos_time = np.loadtxt(output_file)
+    if magnonDispersion.hard_axis:
+        fig1,ax1 = plt.subplots(1,2)
+        fig1.set_figheight(7)
+        fig1.set_figwidth(16)
+    else:
+        fig1,ax1 = plt.subplots()
 
-    fourier_data = np.fft.fftshift(np.abs(np.fft.fft2(pos_time)))
+    titles = ['y-component', 'z-component']
 
-    freq_len = len(fourier_data)
-    k_len = len(fourier_data[0])
-    freq = np.fft.fftfreq(freq_len, time_step)
-    kvector = np.fft.fftfreq(k_len, 5e-9)
+    for i, output_file in enumerate(output_files):
 
-    k_max = 2*np.pi*kvector[int(0.5 * len(kvector))]*5e-9
-    f_min = np.abs(freq[0])
-    f_max = np.abs(freq[int(0.5 * len(freq))])/divisor # to make it THz
-    f_points = int(0.5 * freq_len)
+        pos_time = np.loadtxt(output_file)
 
-    final_result = [fourier_data[i] for i in range(int(0.5 *freq_len),freq_len)]
+        fourier_data = np.fft.fftshift(np.abs(np.fft.fft2(pos_time)))
 
-    fig1,ax1 = plt.subplots()
+        freq_len = len(fourier_data)
+        k_len = len(fourier_data[0])
+        freq = np.fft.fftfreq(freq_len, time_step)
+        kvector = np.fft.fftfreq(k_len, 5e-9)
 
-    ax1.imshow(final_result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
+        k_max = 2*np.pi*kvector[int(0.5 * len(kvector))]*5e-9
+        f_min = np.abs(freq[0])
+        f_max = np.abs(freq[int(0.5 * len(freq))])/divisor # to make it THz
+        f_points = int(0.5 * freq_len)
 
-    label = 'q' + magnonDispersion.axis
+        final_result = [fourier_data[i] for i in range(int(0.5 *freq_len),freq_len)]
 
-    ax1.set_xlabel(label)
-    ax1.set_ylabel(ylabel)
-    # ax1.set_ylim(0, 0.1)
+        label = 'q' + magnonDispersion.axis
 
-    plt.tight_layout()
+        if magnonDispersion.hard_axis:
+            ax1[i].imshow(final_result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
+            ax1[i].set_xlabel(label)
+            ax1[i].set_ylabel(ylabel)
 
-    folder_name = '/'.join(savename.split('/')[:-1])
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
+            x1, x2, y1, y2 = -0.15, 0.15, 0, 0.3
+            axins = ax1[i].inset_axes(
+                [0.5, 0.4, 0.47, 0.47],
+                xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
+            axins.imshow(final_result, extent = [-k_max, k_max,f_min, f_max], origin='lower')
 
-    x1, x2, y1, y2 = -0.25, 0.25, 0, 0.5
-    axins = ax1.inset_axes(
-        [0.5, 0.5, 0.47, 0.47],
-        xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
-    axins.imshow(final_result, extent = [-k_max, k_max,f_min, f_max], origin='lower')
+            ax1[i].indicate_inset_zoom(axins, edgecolor='black')
 
-    ax1.indicate_inset_zoom(axins, edgecolor='black')
+            ax1[i].title.set_text(titles[i])
+
+        else:
+            ax1.imshow(final_result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto")#, clim=(0, clim_max))
+            ax1.set_xlabel(label)
+            ax1.set_ylabel(ylabel)
+
+            x1, x2, y1, y2 = -0.25, 0.25, 0, 0.5
+            axins = ax1.inset_axes(
+                [0.5, 0.5, 0.47, 0.47],
+                xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
+            axins.imshow(final_result, extent = [-k_max, k_max,f_min, f_max], origin='lower')
+
+            ax1.indicate_inset_zoom(axins, edgecolor='black')
+        
+
+        # ax1.set_ylim(0, 0.1)
+
+        plt.tight_layout()
 
     plt.savefig(savename, dpi=600)
 
@@ -1004,14 +1003,13 @@ def plot_magnon_dispersion(magnonDispersion, clim_max = 1000):
         
         output_files = magnonDispersion.cachename()
         savename = magnonDispersion.plotname()
+        params.make_folder(savename)
         
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(1,2)
 
         fig.set_figheight(5)
-        fig.set_figwidth(5)
+        fig.set_figwidth(10)
         yvals =[5,25,45]
-
-        results = []
         
         for i, output_filex in enumerate(output_files):
             
@@ -1031,23 +1029,13 @@ def plot_magnon_dispersion(magnonDispersion, clim_max = 1000):
 
             result = [fourier_data[i] for i in range(int(0.5 *freq_len),freq_len)]
 
-            results.append(result)
+            ax[i].imshow(result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
 
-        final_result = results[0]
+            label = 'q' + magnonDispersion.axis
 
-        
-
-        ax.imshow(final_result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
-
-        label = 'q' + magnonDispersion.axis
-
-        ax.set_xlabel(label)
-        ax.set_ylabel(ylabel)
-        # ax1.set_ylim(0, 0.1)
-
-        folder_name = '/'.join(savename.split('/')[:-1])
-        if not os.path.exists(folder_name):
-            os.makedirs(folder_name)
+            ax[i].set_xlabel(label)
+            ax[i].set_ylabel(ylabel)
+            # ax1.set_ylim(0, 0.1)
 
         plt.tight_layout()
     
@@ -1090,7 +1078,7 @@ def plot_magnon_dispersion(magnonDispersion, clim_max = 1000):
 
     plt.savefig(savename, dpi=600)
 
-    plt.show()
+    # plt.show()
 
 def plot_phonon_dispersion(meshdims, damping, MEC, ani, dir,time_step):
 
@@ -1191,7 +1179,9 @@ def plot_dispersions(plots, savename):
 
     annotations = ['a', 'b', 'c', 'd']
     # titles = ['1 layer', '50 layers', '100 layers', '150 layers', '150 layers \n + damping layer']
-    titles = [r'$\mu_0$ = 5.0 $\cdot 10^{11}$', r'$\mu_0$ = 14.8 $\cdot 10^{11}$', r'$\mu_0$ = 29.6 $\cdot 10^{11}$']
+    titles = ['T = 0.3K', 'T = 0.8K', 'T = 3.0K']
+
+    clim_max = [5000, 15000, 25000]
 
     for i, ax in enumerate(list((axs))):
 
@@ -1214,13 +1204,20 @@ def plot_dispersions(plots, savename):
 
         result = [fourier_data[i] for i in range(int(0.5 *freq_len),freq_len)]
 
-        clim_max = 1000
+        # clim_max = 1000
         # if i == 0:
         #     clim_max = 1000
 
         label = 'qy'
 
-        ax.imshow(result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
+        x1, x2, y1, y2 = -0.25, 0.25, 0, 0.5
+        axins = ax.inset_axes(
+            [0.5, 0.45, 0.47, 0.47],
+            xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
+
+        ax.imshow(result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max[i]))
+        axins.imshow(result, extent = [-k_max, k_max,f_min, f_max], origin='lower')
+        ax.indicate_inset_zoom(axins, edgecolor='black')
 
         # ax.annotate(annotations[i], (0.05, 0.85), xycoords = 'axes fraction', color='white', fontsize=32)
 
@@ -1331,7 +1328,7 @@ def plot_critical_T(criticalT):
     plt.ylabel(r'|${m}_{x}$|')
     plt.tight_layout()
     plt.savefig(savename, dpi=600)
-    # plt.show()
+    plt.show()
 
 def plot_diffusion_length(plots, ts, savename, ani):
     
@@ -1725,34 +1722,34 @@ def main():
 
     # # # # # title = 'Normalized spin accumulation with/without MEC'
 
-    f1 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x45/tAvg_damping0.0004_V-0.58_0.3K.txt'
-    f2 = 'AFM/ex+ani+hard_axis/IP/cache/t_avg/4000x50x45/tAvg_damping0.0004_V-0.58_0.3K.txt'
+    # f1 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x45/tAvg_damping0.0004_V-0.58_0.3K.txt'
+    # f2 = 'AFM/ex+ani+hard_axis/IP/cache/t_avg/4000x50x45/tAvg_damping0.0004_V-0.58_0.3K.txt'
     # f3 = 'AFM/ex+ani/IP/cache/t_avg/3000x50x100/tAvg_damping0.0004_V-4.5_10K.txt'
     # f4 = 'AFM/ex+ani/IP/cache/t_avg/3000x50x100/tAvg_damping0.0004_V-4.5_20K.txt'
 
-    l1 = 'Easy axis'
-    l2 = 'Hard axis'
-    # l3 = '10'
+    # l1 = 'Easy axis'
+    # l2 = 'Hard axis'
+    # # l3 = '10'
     # l4 = '20'
 
-    savename = 'AFM/ex+ani+hard_axis/IP/plots/custom/easy_vs_hard_comparison_9layer.png'
+    # savename = 'AFM/ex+ani+hard_axis/IP/plots/custom/easy_vs_hard_comparison_9layer.png'
 
-    plot_tAvg_comparison([f1,f2], [l1,l2], savename, 'IP')
+    # plot_tAvg_comparison([f1,f2], [l1,l2], savename, 'IP')
 
     # plot_dispersion([4000, 50, 5], 4e-4, 1, 'OOP', 'y')
 
     # # # FOR DISPERSIONS DOWN HERE
 
-    # f1 = 'AFM/ex+ani/IP/cache/dispersions/4000x50x5/diry_axisxV-0.0115_damping0.0004_T0.3_dispersion.txt'
-    # f2 = 'AFM/ex+ani/IP/cache/dispersions/4000x50x5/diry_axisxV-0.02_damping0.0004_T0.3_dispersion.txt'
-    # f3 = 'AFM/ex+ani/IP/cache/dispersions/4000x50x5/diry_axisxV-0.04_damping0.0004_T0.3_dispersion.txt'
+    f1 = 'AFM/ex+ani+hard_axis/IP/cache/dispersions/4000x50x5/diry_axisxgroundstate_damping0.0004_T0.3_dispersion.txt'
+    f2 = 'AFM/ex+ani+hard_axis/IP/cache/dispersions/4000x50x5/diry_axisxgroundstate_damping0.0004_T0.8_dispersion.txt'
+    f3 = 'AFM/ex+ani+hard_axis/IP/cache/dispersions/4000x50x5/diry_axisxgroundstate_damping0.0004_T3_dispersion.txt'
     # # f4 = 'IP/cache/dispersions/1000x50x150/steady/diry_axisx_dispersion.txt'
     # # f5 = 'IP/cache/dispersions/1000x50x190/steady/diry_axisx_dispersion.txt'
 
 
-    # savename = 'AFM/ex+ani/IP/plots/custom/1layer_dispersion_torque_comparison_0.3K.png'
+    savename = 'AFM/ex+ani+hard_axis/IP/plots/custom/dispersion_temperature_comparison.png'
 
-    # plot_dispersions((f1,f2,f3), savename)
+    plot_dispersions((f1,f2,f3), savename)
 
     # ### DIFFUSION LENGTHS DOWN HERE
 

@@ -37,11 +37,14 @@ class TimeAvgSA(Params):
         self.x_start = x_start
         self.x_stop = x_stop
 
+    def simname(self):
+        return path + self.type + '/' + self.modules_folder + self.ani + '/sims/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/V' + str(V) + '_damping' + str(self.damping) + '_' + str(self.T) + 'K_steady_state.bsm'
+
     def cachename(self):
-        return 0
+        return path + self.type + '/' + self.modules_folder + self.ani + '/cache/' + 't_avg/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/tAvg_damping' + str(self.damping) + '_V' + str(self.V) + '_' + str(self.T) + 'K.txt'
     
     def plotname(self):
-        return 0
+        return path + self.type + '/' + self.modules_folder + self.ani + '/plots/' + 't_avg/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/tAvg_damping' + str(self.damping) + '_V' + str(self.V) + '_' + str(self.T) + 'K.png'
     
 class Steadystate(Params):
 
@@ -50,13 +53,13 @@ class Steadystate(Params):
         self.x_vals = x_vals
 
     def simname(self):
-        return path + type + '/' + self.modules_folder + self.ani + '/sims/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/V' + str(self.V) + '_damping' + str(self.damping) + '_' + str(self.T) + 'K_steady_state.bsm'
+        return path + self.type + '/' + self.modules_folder + self.ani + '/sims/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/V' + str(self.V) + '_damping' + str(self.damping) + '_' + str(self.T) + 'K_steady_state.bsm'
 
     def cachename(self):
-        return path + type + '/' + self.modules_folder + self.ani + '/cache/plateau/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/plateau_V'  + str(self.V) + '_damping' + str(self.damping) + '_' + str(self.T) + 'K.txt'
+        return path + self.type + '/' + self.modules_folder + self.ani + '/cache/plateau/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/plateau_V'  + str(self.V) + '_damping' + str(self.damping) + '_' + str(self.T) + 'K.txt'
     
     def plotname(self):
-        return type + '/' + self.modules_folder + self.ani + '/plots/' + 't_avg/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/tAvg_damping' + str(self.damping) + '_V' + str(self.V) + '_' + str(self.T) + 'K.png'
+        return self.type + '/' + self.modules_folder + self.ani + '/plots/' + 't_avg/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/tAvg_damping' + str(self.damping) + '_V' + str(self.V) + '_' + str(self.T) + 'K.png'
     
 class MagnonDispersion(Params):
 
@@ -76,7 +79,12 @@ class MagnonDispersion(Params):
                 sincstr = 'sinc_'
             else:
                 sincstr = ''
-            return [path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + sincstr + 'dir' + self.component + '_axis' + self.axis + 'groundstate' + '_damping' + str(self.damping) + '_T' + str(self.T) +  '_dispersion.txt']
+            if self.hard_axis:
+                y = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/ycomponent_axis' + self.axis + 'groundstate' + '_damping' + str(self.damping) + '_T' + str(self.T) +  '_dispersion.txt'
+                z = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/zcomponent_axis' + self.axis + 'groundstate' + '_damping' + str(self.damping) + '_T' + str(self.T) +  '_dispersion.txt'
+                return [y,z]
+            else:
+                return [path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + sincstr + 'dir' + self.component + '_axis' + self.axis + 'groundstate' + '_damping' + str(self.damping) + '_T' + str(self.T) +  '_dispersion.txt']
         else:
             one = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + 'dir' + self.component + '_axis' + self.axis + 'V' + str(self.V) + '_damping' + str(self.damping) + '_T' + str(self.T) + '_y=25_dispersion.txt'
             two = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + 'dir' + self.component + '_axis' + self.axis + 'V' + str(self.V) + '_damping' + str(self.damping) + '_T' + str(self.T) + '_y=5_dispersion.txt'

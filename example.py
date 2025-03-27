@@ -1,74 +1,74 @@
-from NetSocks import NSClient # type:ignore
+import sys
+import os
+sys.path.insert(0, 'C:/users/mathimyh/documents/boris data/borispythonscripts/')
 
-# Dimensions
-Lx = 4000
+from NetSocks import NSClient   # type: ignore
+import numpy as np
+
+ns = NSClient(); ns.configure(True, False)
+ns.cuda(1); ns.reset(); ns.clearelectrodes()
+
+# 5nm = -0.03
+# 100nm =-2.9 
+
+# Dimensions (nm)
+Lx = 1500
 Ly = 50
 Lz = 5
 cellsize = 5
 meshdims = (Lx, Ly, Lz)
 
 # Parameters
-t = 100
-V = -0.021
+t = 1000 # ps
+V = -0.03 # mV
 damping = 4e-4
-MEC = 0
-ani = 'IP'
-type = 'FM'
-T = 0.3
-
-ns = NSClient(); ns.configure(True, False)
-ns.cuda(1)
-ns.reset()
-ns.iterupdate(200)
-
-modules = ['exchange', 'aniuni']
+T = 0.3 # K
 
 # Set up the antiferromagnet
-FM = ns.Ferromagnet(np.array(meshdims)*1e-9, [cellsize*1e-9])
-FM.modules(modules)
+AFM = ns.AntiFerromagnet(np.array(meshdims)*1e-9, [cellsize*1e-9])
+AFM.modules(['exchange', 'aniuni', 'SOTfield', 'transport'])
 temp = str(T) + 'K'
 ns.temperature(temp)
 ns.setode('sLLG', 'RK4') # Stochastic LLG for temperature effects
-ns.setdt(1e-15) 
+ns.setdt(1e-15)
 
-# Set parameters. Should possibly just save these in the database really    
-FM.param.grel = 1
-FM.param.damping =  damping
-FM.param.Ms = 2.1e3
-FM.param.Nxy = 0
-FM.param.A = 76e-15 # J/m
-FM.param.J1 = 0
-FM.param.J2 = 0
-FM.param.K1 = 2100 # J/m^3
-FM.param.K2 = 0
-FM.param.K3 = 0
-FM.param.cHa = 1
-# Different anisotropies
-if ani == 'OOP':
-    FM.param.ea1 = (0,0,1) # Set it z-direction
-    FM.setangle(0,90) # Just move m to z-direction, not necessary to wait every time
-elif ani == 'IP':
-    FM.param.ea1 = (1,0,0)
-else:
-    print('Choose anisotropy direction')
-    exit()
+# Set parameters   
+AFM.param.grel_AFM = 1
+AFM.param.damping_AFM =  damping
+AFM.param.Ms_AFM = 2.1e3
+AFM.param.Nxy = 0
+AFM.param.A_AFM = 76e-15 # J/m
+AFM.param.Ah = -460e3 # J/m^3
+AFM.param.Anh = 0.0
+AFM.param.J1 = 0
+AFM.param.J2 = 0
+AFM.param.K1_AFM = 21 # J/m^3
+AFM.param.K2_AFM = 0
+AFM.param.K3_AFM = 0
+AFM.param.cHa = 1
+AFM.param.ea1 = (1,0,0)
 
-# Add increased damping at edges along x-axis to prevent reflections
-FM.param.damping.setparamvar('abl_tanh', [300/meshdims[0], 300/meshdims[0], 0, 0, 0, 0, 1, 10, 300]) 
+# Add increased damping at edges along x-axis to prevent reflections. For smaller meshes this needs to be shortened
+damping_x = 50
+AFM.param.damping_AFM.setparamvar('abl_tanh', [damping_x/meshdims[0], damping_x/meshdims[0], 0, 0, 0, 0, 1, 10, damping_x])
 
-# Add the magnetoelastic parameters if necessary
-if MEC:
-    FM.surfacefix('-z')
-    ns.seteldt(1e-15)
-    FM.mcellsize([cellsize*1e-9]) 
-    FM.param.cC = (36e10, 17e10, 8.86e10) # N/m^2       A. Yu. Lebedev et al (1989)
-    FM.param.density = 5250 #kg/m^3       found this on google
-    FM.param.MEc = (-3.44e6, 7.5e6) #J/m^3   G. Wedler et al (1999) 
-    FM.param.mdamping = 1e15 # Should probably be lower than this 
+# Set spesific params for torque
+AFM.param.SHA = 1
+AFM.param.flST = 1
 
-# FM.pbc(['x', 10])
+# Current along y-direction
+ns.addelectrode(np.array([(meshdims[0]/2 - 100), 0, (meshdims[2]-cellsize), (meshdims[0]/2 + 100), 0, meshdims[2]])* 1e-9)
+ns.addelectrode(np.array([(meshdims[0]/2 - 100), meshdims[1], (meshdims[2]-cellsize), (meshdims[0]/2 + 100), meshdims[1], meshdims[2]]) * 1e-9)
+ns.designateground('1')
 
-# ns.random()
+# Add step function so that torque only acts on region in the injector
+if meshdims[2]==5:
+    width = 20
+elif meshdims[2] == 100:
+    width = 40
+func = '(step(x-' + str(meshdims[0]/2 - width/2) + 'e-9)-step(x-' + str(meshdims[0]/2 + width/2) + 'e-9)) * (step(z-' + str(meshdims[2]-cellsize) + 'e-9)-step(z-' + str(meshdims[2]) + 'e-9))'
+AFM.param.SHA.setparamvar('equation', func)
+AFM.param.flST.setparamvar('equation',func)
 
-# Relax for 1000 ps to thermally excite magnons
-ns.Relax(['time', 1000e-12])
+# ns.Relax('time', 1000e-12)
+ns.V([0.001*V, 'time', t*1e-12])

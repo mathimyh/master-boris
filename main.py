@@ -20,14 +20,14 @@ def main():
     meshdims = (Lx, Ly, Lz)
 
     # Parameters
-    t = 100 #ps
-    V = -2.9 # mV
+    t = 1000 #ps
+    V = -0 # mV
     damping = 4e-4 
     MEC = 0
-    hard_axis = 0
+    hard_axis = 1
     ani = 'IP'
     type = 'AFM'
-    T = 0.6
+    T = 3.
     x_vals = [2000, 2100, 2200, 3000, 3500, 4000]
     # x_vals = [520, 600, 700, 800, 900, 1000]
     # x_vals = [1000, 1200, 1300, 1500, 1700, 2000]
@@ -39,7 +39,7 @@ def main():
                                                 type, hard_axis, 2020, 4000)
     
     magnonDispersion = params.MagnonDispersion(meshdims, cellsize, t, V, damping, 
-                                               MEC, ani, T, type, hard_axis, 'y', 'x', False)
+                                               MEC, ani, T, type, hard_axis, 'y', 'x', False, sinc=False)
     
     criticalT = params.CriticalT(meshdims, cellsize, t, V, damping, 
                                                MEC, ani, T, type, hard_axis,100)
@@ -50,16 +50,15 @@ def main():
     # transport.time_avg_SA(meshdims, cellsize,t,V, damping, MEC, ani, T, type, hard_axis, 520, 1000)
     # plotting.plot_tAvg_SA(timeAvgSA)
     # plotting.fft_transport_underneath(*params)
-    # transport.save_steadystate2(ns, steadystate)
+    # transport.save_steadystate(ns, steadystate)
     # transport.time_avg_SA_underneath(ns, timeAvgSA)
     # plotting.plot_plateau(steadystate)
-    # dispersion_relations.critical_T(ns, meshdims, cellsize, t, damping, MEC, ani, type, max_T=100)
+    # dispersion_relations.critical_T(ns, criticalT)
     # dispersion_relations.magnon_dispersion(ns, magnonDispersion)
     # dispersion_relations.critical_T(ns, criticalT, 100)
-    # plotting.plot_magnon_dispersion_with_zoom(magnonDispersion, 1000)
+    # plotting.plot_magnon_dispersion_with_zoom(magnonDispersion, 5000)
     # transport.current_density(*params)
-    # plotting.plot_critical_T(meshdims, damping, MEC, ani, type)
-    
+    # plotting.plot_critical_T(criticalT)
     
     nsm = NSMultiClient(scriptserverports = range(1000,1002), cudaDevices = range(0,2))
     nsm.configure(True, False)
