@@ -197,7 +197,7 @@ def critical_T(ns, criticalT):
     
     if criticalT.type == 'AFM':
         M = transport.Init_AFM(ns, criticalT)
-        measuring_t = 5e-12
+        measuring_t = 10e-12
         step_t = 40e-12
     elif criticalT.type == 'FM':
         M = transport.Init_FM(criticalT)
@@ -219,7 +219,7 @@ def critical_T(ns, criticalT):
     params.make_folder(output_file)
     data = []
 
-    avs = 20
+    avs = 30
 
     # Increase temperature over time 
     for i in range(criticalT.max_T):
@@ -246,14 +246,15 @@ def critical_T(ns, criticalT):
 
     plotting.plot_critical_T(criticalT)
 
-def magnon_dispersion_sinc(ns, magnonDispersion):
+def magnon_dispersion_sinc(ns, magnonDispersionSinc):
+
     int_dir = 0
 
-    if magnonDispersion.component == 'x':
+    if magnonDispersionSinc.component == 'x':
         int_dir = 1
-    elif magnonDispersion.component == 'y':
+    elif magnonDispersionSinc.component == 'y':
         int_dir = 2
-    elif magnonDispersion.component == 'z':
+    elif magnonDispersionSinc.component == 'z':
         int_dir = 3
     else:
         print('Choose direction')
@@ -263,18 +264,18 @@ def magnon_dispersion_sinc(ns, magnonDispersion):
     ns.reset()
     
     modules = ['exchange', 'aniuni', 'Zeeman']
-    if magnonDispersion.MEC:
+    if magnonDispersionSinc.MEC:
         modules.append('melastic')
 
     # Set up the antiferromagnet
-    AFM = ns.AntiFerromagnet(np.array(magnonDispersion.meshdims)*1e-9, [magnonDispersion.cellsize*1e-9])
+    AFM = ns.AntiFerromagnet(np.array(magnonDispersionSinc.meshdims)*1e-9, [magnonDispersionSinc.cellsize*1e-9])
     AFM.modules(modules)
     ns.setode('LLG', 'RK4') # No temperature
     ns.setdt(1e-15)
 
     # Set parameters. Should possibly just save these in the database really    
     AFM.param.grel_AFM = 1
-    AFM.param.damping_AFM = magnonDispersion.damping
+    AFM.param.damping_AFM = magnonDispersionSinc.damping
     AFM.param.Ms_AFM = 2.1e3
     AFM.param.Nxy = 0
     AFM.param.A_AFM = 76e-15 # J/m
@@ -282,7 +283,7 @@ def magnon_dispersion_sinc(ns, magnonDispersion):
     AFM.param.Anh = 0.0
     AFM.param.J1 = 0
     AFM.param.J2 = 0
-    if magnonDispersion.hard_axis:
+    if magnonDispersionSinc.hard_axis:
         AFM.param.K1_AFM = -21e-3 # J/m^3
         AFM.param.K2_AFM = 21 # J/m^3
     else:
@@ -291,10 +292,10 @@ def magnon_dispersion_sinc(ns, magnonDispersion):
     AFM.param.K3_AFM = 0
     AFM.param.cHa = 1
     # Different anisotropies
-    if magnonDispersion.ani == 'OOP':
+    if magnonDispersionSinc.ani == 'OOP':
         AFM.param.ea1 = (0,0,1) # Set it z-direction
         AFM.setangle(0,90) # Just move m to z-direction, not necessary to wait every time
-    elif magnonDispersion.ani == 'IP':
+    elif magnonDispersionSinc.ani == 'IP':
         AFM.param.ea1 = (1,0,0)
         AFM.setangle(90,0)
     else:
@@ -304,27 +305,28 @@ def magnon_dispersion_sinc(ns, magnonDispersion):
 
     Ms = 2.1e3
 
-    output_file = magnonDispersion.cachename()
-    params.make_folder(output_file[0])
+    output_files = magnonDispersionSinc.cachename()
+    params.make_folder(output_files[0])
     ns.reset()
 
     time = 0.0
     ns.cuda(1)
 
-    ns.dp_newfile(output_file)
+    for output_file in output_files:
+        ns.dp_newfile(output_file)
 
     AFM.pbc('x', 10)
 
     equiltime = 0
-    total_time = 2 *magnonDispersion.t*1e-12
+    total_time = 2 *magnonDispersionSinc.t*1e-12
     H0 = 0
     He = 500e3
 
     ns.setstage('Hequation')
-    ns.editstagevalue(0, 'H0, He *sinc(kc*(z-Lz/2))*sinc(kc*(y-Ly/2))*sinc(2*PI*fc*(t-t0)),0')
+    ns.editstagevalue(0, 'H0, He *sinc(kc*(x-Lx/2))*sinc(kc*(y-Ly/2))*sinc(2*PI*fc*(t-t0)),He *sinc(kc*(x-Lx/2))*sinc(kc*(y-Ly/2))*sinc(2*PI*fc*(t-t0))')
 
-    N = 2400
-    L = magnonDispersion.meshdims[0]
+    N = 600
+    L = magnonDispersionSinc.meshdims[0]
     kc = 2*np.pi*N/(2*L)
     fc = 5e12
     time_step = 0.1e-12
@@ -333,17 +335,27 @@ def magnon_dispersion_sinc(ns, magnonDispersion):
     ns.equationconstants('He', He)
     ns.equationconstants('kc', kc)
     ns.equationconstants('fc', fc)
-    ns.equationconstants('t0', magnonDispersion.t)
+    ns.equationconstants('t0', magnonDispersionSinc.t)
 
+    #setup data extraction in command buffer : need to extract a normalized magnetization profile at each time_step and append it to output file
     ns.setdata('commbuf')
     ns.editstagestop(0, 'time', total_time)
-    ns.editdatasave(0, 'time', time_step)    
-    
+    ns.editdatasave(0, 'time', time_step)
+
     ns.clearcommbuffer()
-    ns.dp_getexactprofile((np.array([0, magnonDispersion.meshdims[1]/2, magnonDispersion.meshdims[2]-magnonDispersion.cellsize])*1e-9), (np.array([magnonDispersion.meshdims[0], magnonDispersion.meshdims[1]/2, magnonDispersion.meshdims[2]])*1e-9), magnonDispersion.cellsize*1e-9, 0)
-    ns.dp_div(int_dir, Ms, bufferCommand = True)
-    ns.dp_saveappendasrow(output_file, 2, bufferCommand = True)
+    #the following 3 commands are not executed now, but buffered so they can be executed at runtime every time_step ('commbuf' output data set)
+    #get magnetisation profile along length through center
+
+
+    #get magnetisation profile along length through center
+    ns.dp_getexactprofile((np.array([magnonDispersionSinc.cellsize/2, magnonDispersionSinc.meshdims[1]/2, magnonDispersionSinc.meshdims[2]-magnonDispersionSinc.cellsize])*1e-9), 
+                        (np.array([magnonDispersionSinc.meshdims[0] - magnonDispersionSinc.cellsize/2, magnonDispersionSinc.meshdims[1]/2, magnonDispersionSinc.meshdims[2]])*1e-9), 
+                            magnonDispersionSinc.cellsize*1e-9, 0)
+    
+    #save only the y component of magnetisation at time_ste
+    ns.dp_div(2, Ms, bufferCommand=True)
+    ns.dp_saveappendasrow(output_files[0], 2, bufferCommand = True)
 
     ns.Run()
 
-    plotting.plot_magnon_dispersion_with_zoom(magnonDispersion)
+    # plotting.plot_magnon_dispersion_with_zoom(magnonDispersion)

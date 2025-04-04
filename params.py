@@ -63,28 +63,23 @@ class Steadystate(Params):
     
 class MagnonDispersion(Params):
 
-    def __init__(self, meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, component, axis, steadystate=False, sinc=False):
+    def __init__(self, meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, component, axis, steadystate=False):
         super().__init__(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis)
         self.component = component
         self.axis = axis
         self.steadystate = steadystate
-        self.sinc = sinc
 
     def simname(self):
         return path + self.type + '/' + self.modules_folder + self.ani + '/sims/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/V' + str(self.V) + '_damping' + str(self.damping) + '_' + str(self.T) + 'K_steady_state.bsm'
 
     def cachename(self):
         if not self.steadystate:
-            if self.sinc:
-                sincstr = 'sinc_'
-            else:
-                sincstr = ''
             if self.hard_axis:
                 y = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/ycomponent_axis' + self.axis + 'groundstate' + '_damping' + str(self.damping) + '_T' + str(self.T) +  '_dispersion.txt'
                 z = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/zcomponent_axis' + self.axis + 'groundstate' + '_damping' + str(self.damping) + '_T' + str(self.T) +  '_dispersion.txt'
                 return [y,z]
             else:
-                return [path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + sincstr + 'dir' + self.component + '_axis' + self.axis + 'groundstate' + '_damping' + str(self.damping) + '_T' + str(self.T) +  '_dispersion.txt']
+                return [path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/dir' + self.component + '_axis' + self.axis + 'groundstate' + '_damping' + str(self.damping) + '_T' + str(self.T) +  '_dispersion.txt']
         else:
             one = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + 'dir' + self.component + '_axis' + self.axis + 'V' + str(self.V) + '_damping' + str(self.damping) + '_T' + str(self.T) + '_y=25_dispersion.txt'
             two = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + 'dir' + self.component + '_axis' + self.axis + 'V' + str(self.V) + '_damping' + str(self.damping) + '_T' + str(self.T) + '_y=5_dispersion.txt'
@@ -93,14 +88,25 @@ class MagnonDispersion(Params):
 
     def plotname(self):
         if not self.steadystate:
-            if self.sinc:
-                sincstr = 'sinc_'
-            else:
-                sincstr = ''
-            return path + self.type + '/' + self.modules_folder + self.ani + '/plots/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + sincstr + 'dir' + self.component + '_axis' + self.axis + 'groundstate' + '_damping' + str(self.damping) + '_T' + str(self.T) +  '_dispersion.png'
+            return path + self.type + '/' + self.modules_folder + self.ani + '/plots/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + 'dir' + self.component + '_axis' + self.axis + 'groundstate' + '_damping' + str(self.damping) + '_T' + str(self.T) +  '_dispersion.png'
         else:
             return path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + 'dir' + self.component + '_axis' + self.axis + 'V' + str(self.V) + '_damping' + str(self.damping) + '_T' + str(self.T) + '_dispersion.png'
-        
+
+class MagnonDispersionSinc(Params):
+
+    def __init__(self, meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, component, axis):
+        super().__init__(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis)
+        self.component = component
+        self.axis = axis
+
+    def cachename(self):
+        y = self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/sinc_ycomponent_axis' + self.axis + '_damping' + str(self.damping) + '_dispersion.txt'
+        z = self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/sinc_zcomponent_axis' + self.axis + '_damping' + str(self.damping) + '_dispersion.txt'
+        return [y,z]
+
+    def plotname(self):
+        return path + self.type + '/' + self.modules_folder + self.ani + '/plots/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/sinc_axis' + self.axis + '_damping' + str(self.damping) +  '_dispersion.png'
+
 class CriticalT(Params):
 
     def __init__(self, meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, max_T):
