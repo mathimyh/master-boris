@@ -12,10 +12,20 @@ import params
 
 path = 'C:/Users/mathimyh/master/master-boris/'
 
-# Initializes an AFM mesh with hematite parameters. Returns the mesh
 def Init_AFM(ns, params):
     
-    modules = ['exchange', 'aniuni']
+    '''
+
+    Initializes an AFM mesh with the given parameters. Returns the mesh object
+    
+    '''
+
+    # Different modules depending on params
+    modules = ['exchange']
+    if params.hard_axis:
+        modules.append('anitens')
+    else:
+        modules.append('aniuni')
     if params.MEC:
         modules.append('melastic')
 
@@ -38,8 +48,8 @@ def Init_AFM(ns, params):
     AFM.param.J1 = 0
     AFM.param.J2 = 0
     if params.hard_axis:
-        AFM.param.K1_AFM = -21e-3 # J/m^3
-        AFM.param.K2_AFM = 21 # J/m^3
+        AFM.param.K1_AFM = 21 # J/m^3
+        ns.setktens('-0.001x2', '1z2')
     else:
         AFM.param.K1_AFM = 21 # J/m^3
         AFM.param.K2_AFM = 0
@@ -71,7 +81,8 @@ def Init_AFM(ns, params):
         AFM.param.MEc = (-3.44e6, 7.5e6) #J/m^3  (Original B2 = 7.5e6)   G. Wedler et al (1999) 
         AFM.param.mdamping = 1e15 # Should probably be lower than this 
 
-    
+    # ns.random()
+
     # Relax for 10 ps to get some fluctuations
     ns.Relax(['time', 10e-12])
 

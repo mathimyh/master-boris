@@ -1080,6 +1080,74 @@ def plot_magnon_dispersion(magnonDispersion, clim_max = 1000):
 
     # plt.show()
 
+def plot_magnon_dispersion_overlay(magnonDispersion, clim_max = 1000):
+
+    if magnonDispersion.type == 'AFM':
+        time_step = 0.1e-12
+        ylabel = 'f (THz)'
+        divisor = 1e12
+    elif magnonDispersion.type == 'FM':
+        time_step = 1e-12
+        ylabel = 'f (GHz)'
+        divisor = 1e9
+    else:
+        raise Exception('Choose type!')
+    
+    
+    output_files = magnonDispersion.cachename()
+    savename = magnonDispersion.plotname()
+    params.make_folder(savename)
+
+    fig1,ax1 = plt.subplots()
+    fig1.set_figheight(6)
+    fig1.set_figwidth(8)
+
+    results = []
+
+    for i, output_file in enumerate(output_files):
+
+        pos_time = np.loadtxt(output_file)
+
+        fourier_data = np.fft.fftshift(np.abs(np.fft.fft2(pos_time)))
+
+        freq_len = len(fourier_data)
+        k_len = len(fourier_data[0])
+        freq = np.fft.fftfreq(freq_len, time_step)
+        kvector = np.fft.fftfreq(k_len, 5e-9)
+
+        k_max = 2*np.pi*kvector[int(0.5 * len(kvector))]*5e-9
+        f_min = np.abs(freq[0])
+        f_max = np.abs(freq[int(0.5 * len(freq))])/divisor # to make it THz
+        f_points = int(0.5 * freq_len)
+
+        results.append(np.array([fourier_data[i] for i in range(int(0.5 *freq_len),freq_len)]))
+
+    final_result = results[0] + results[1]
+
+    label = 'q' + magnonDispersion.axis
+
+    ax1.imshow(final_result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
+    ax1.set_xlabel(label)
+    ax1.set_ylabel(ylabel)
+
+    x1, x2, y1, y2 = -0.25, 0.25, 0, 0.5
+    axins = ax1.inset_axes(
+        [0.5, 0.45, 0.47, 0.47],
+        xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
+    axins.set_yticks([0.0,0.2,0.4])
+    axins.imshow(final_result, extent = [-k_max, k_max,f_min, f_max], origin='lower', interpolation='bilinear', clim=(0, 15000))
+
+    ax1.indicate_inset_zoom(axins, edgecolor='black')
+        
+
+        # ax1.set_ylim(0, 0.1)
+
+    plt.tight_layout()
+
+    plt.savefig(savename, dpi=600)
+
+    plt.show()
+
 def plot_phonon_dispersion(meshdims, damping, MEC, ani, dir,time_step):
 
     mec_folder = ''

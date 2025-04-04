@@ -27,7 +27,7 @@ def main():
     hard_axis = 1
     ani = 'IP'
     type = 'AFM'
-    T = 3.
+    T = 0.8
     x_vals = [2000, 2100, 2200, 3000, 3500, 4000]
     # x_vals = [520, 600, 700, 800, 900, 1000]
     # x_vals = [1000, 1200, 1300, 1500, 1700, 2000]
@@ -39,14 +39,17 @@ def main():
                                                 type, hard_axis, 2020, 4000)
     
     magnonDispersion = params.MagnonDispersion(meshdims, cellsize, t, V, damping, 
-                                               MEC, ani, T, type, hard_axis, 'y', 'x', False, sinc=False)
+                                               MEC, ani, T, type, hard_axis, 'y', 'x', False)
+    
+    magnonDispersionSinc = params.MagnonDispersionSinc(meshdims, cellsize, t, V, damping,
+                                                       MEC, ani, T, type, hard_axis, 'y', 'x')
     
     criticalT = params.CriticalT(meshdims, cellsize, t, V, damping, 
-                                               MEC, ani, T, type, hard_axis,100)
+                                               MEC, ani, 0, type, hard_axis,100)
 
     # ns = NSClient(); ns.configure(True, False)
 
-    # transport.Init_AFM(timeAvgSA)
+    # transport.Init_AFM(ns, timeAvgSA)
     # transport.time_avg_SA(meshdims, cellsize,t,V, damping, MEC, ani, T, type, hard_axis, 520, 1000)
     # plotting.plot_tAvg_SA(timeAvgSA)
     # plotting.fft_transport_underneath(*params)
@@ -57,25 +60,26 @@ def main():
     # dispersion_relations.magnon_dispersion(ns, magnonDispersion)
     # dispersion_relations.critical_T(ns, criticalT, 100)
     # plotting.plot_magnon_dispersion_with_zoom(magnonDispersion, 5000)
+    plotting.plot_magnon_dispersion_overlay(magnonDispersion, clim_max=10000)
     # transport.current_density(*params)
     # plotting.plot_critical_T(criticalT)
     
-    nsm = NSMultiClient(scriptserverports = range(1000,1002), cudaDevices = range(0,2))
-    nsm.configure(True, False)
+    # nsm = NSMultiClient(scriptserverports = range(1000,1002), cudaDevices = range(0,2))
+    # nsm.configure(True, False)
     # meshes = []
     # for i in range(5, 50, 5):
     #     meshes.append([4000, 50, i])
 
     # Vs = [-0.06, -0.12, -0.18, -0.25, -0.32, -0.38, -0.45, -0.52, -0.58]
     # tot = len(meshes)
-    dispersions = []
-    for i in [0.6,0.8,1.,3.]:
-        temp = params.MagnonDispersion(meshdims, cellsize, t, V, damping, 
-                                               MEC, ani, i, type, hard_axis, 'y', 'x', False)
-        dispersions.append(temp)
+    # dispersions = [magnonDispersion]
+    # for i in [0.3,0.6,0.8,1.,3.]:
+    #     temp = params.MagnonDispersion(meshdims, cellsize, t, V, damping, 
+    #                                            MEC, ani, i, type, 0, 'y', 'x', False)
+    #     dispersions.append(temp)
 
     # nsm.Run(transport.complete_simulation_AFM, meshes, [cellsize]*tot, [500]*tot, [100]*tot, Vs, [damping]*tot, [MEC]*tot, [ani]*tot, [T]*tot, [hard_axis]*tot)
-    nsm.Run(dispersion_relations.magnon_dispersion, dispersions)
+    # nsm.Run(dispersion_relations.magnon_dispersion, dispersions)
     # nsm.Run(transport.time_avg_SA_z, meshes, [cellsize]*tot, [t]*tot, Vs, [damping]*tot, [MEC]*tot, [ani]*tot, [T]*tot, [type]*tot)
     # nsm.Run(transport.save_steadystate(ns, [meshdims]*2, [cellsize]*2, [t]*2, [0.002, 0.003], [damping]*2, [MEC]*2, [ani]*2, [T]*2, [type]*2, [x_vals]*2))
     # params = [meshdims, cellsize, t, V, damping, MEC, ani, T, type]
