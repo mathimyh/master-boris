@@ -16,7 +16,10 @@ def Init_AFM(ns, params):
     
     '''
 
-    Initializes an AFM mesh with the given parameters. Returns the mesh object
+    Initializes an AFM mesh with the given parameters and modules. 
+    Standard is to start with magnetization along easy axis and relax for 10ps to get fluctuations.
+    
+    Returns the mesh object
     
     '''
 
@@ -28,6 +31,8 @@ def Init_AFM(ns, params):
         modules.append('aniuni')
     if params.MEC:
         modules.append('melastic')
+    if params.Hfield:
+        modules.append('Zeeman')
 
     # Set up the antiferromagnet
     AFM = ns.AntiFerromagnet(np.array(params.meshdims)*1e-9, [params.cellsize*1e-9])
@@ -37,7 +42,7 @@ def Init_AFM(ns, params):
     ns.setode('sLLG', 'RK4') # Stochastic LLG for temperature effects
     ns.setdt(1e-15)
 
-    # Set parameters. Should possibly just save these in the database really    
+    # Set material parameters    
     AFM.param.grel_AFM = 1
     AFM.param.damping_AFM =  params.damping
     AFM.param.Ms_AFM = 2.1e3
@@ -83,14 +88,28 @@ def Init_AFM(ns, params):
 
     # ns.random()
 
-    # Relax for 10 ps to get some fluctuations
-    ns.Relax(['time', 10e-12])
+    # Critical field, found from calculations
+    AFM.setfield(params.Hfield, 90, 90)
+
+    # Relax to reach plateau of fluctuations
+    relax_time = 10e-12
+    if params.hard_axis and params.Hfield > 0: # Needs longer time with these conditions
+        relax_time = 50e-12
+    ns.Relax(['time', relax_time])
 
     # Return the mesh, ready for simulations
     return AFM
 
-# Initializes a FM mesh with same parameters as AFM. Returns the mesh
 def Init_FM(ns, params):
+
+    '''
+    
+    Initializes a FM mesh with the given parameters and modules. 
+    Standard is to start with magnetization along easy axis and relax for 1000ps to get fluctuations.
+    
+    Returns the mesh object and saves the simulation.
+    
+    '''
 
     ns.iterupdate(200)
     
@@ -153,9 +172,18 @@ def Init_FM(ns, params):
     # ns.savesim(sim_name)
     return FM
 
-# Sets up a simulation with a virtual current
 def virtual_current(ns, params):
     
+    '''
+    
+    Retrieves a ground state mesh from the Init function and adds all necessary modules and parameters
+    for a virtual current simulation. 
+
+    Returns the mesh.
+    
+    '''
+
+
     # Retrieve the desired mesh
     if params.type == 'AFM':
         M = Init_AFM(ns, params)
@@ -218,13 +246,19 @@ def virtual_current(ns, params):
 
     return M
 
-# Runs a simulation from ground state for a given time
-# Saves the simulation after
-# Can plot magnetization at x_vals to find plateau 
 def save_steadystate(ns, steadystate):
 
+    '''
+    
+    Start with a system in its ground state and find steady state for transport. 
+    Can save <mxdmdt> as a function of time to make a plateau plot.
+    Saves the system in steady state.
+    
+    '''
+
+
     M = virtual_current(ns, steadystate)
-    ns.iterupdate(200)
+    # ns.iterupdate(200)
 
     savename = steadystate.simname()
     params.make_folder(savename)
@@ -455,8 +489,14 @@ def current_density(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_a
 
     # plotting.plot_current_density(meshdims, cellsize, t, V, damping, MEC, ani, T, type)
     
-# Loads a simulation in steady state, runs the simulation and saves time and <mxdmdt> along the x-axis
 def time_avg_SA(ns, timeAvgSA):
+
+    '''
+
+    Loads a system in steady state and saves <mxdmdt> over time along the x-axis
+    given by x_start and x_stop
+
+    '''
 
 
     sim_name = timeAvgSA.simname()
@@ -467,9 +507,9 @@ def time_avg_SA(ns, timeAvgSA):
 
     ns.setdata('time')
     for i in range(int((timeAvgSA.x_stop - timeAvgSA.x_start)/timeAvgSA.cellsize)):
-        temp = np.array([timeAvgSA.x_start + (1*i*timeAvgSA.cellsize), 0, timeAvgSA.meshdims[2], 
+        temp = np.array([timeAvgSA.x_start + (i*timeAvgSA.cellsize), 0, timeAvgSA.meshdims[2], 
                          timeAvgSA.x_start + (1 + i)*timeAvgSA.cellsize, timeAvgSA.meshdims[1], timeAvgSA.meshdims[2]]) * 1e-9 # Only measure at the top
-        ns.adddata('<mxdmdt>', type, temp)
+        ns.adddata('<mxdmdt>', timeAvgSA.type, temp)
 
     savename = timeAvgSA.cachename()
     params.make_folder(savename)

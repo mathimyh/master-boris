@@ -788,8 +788,8 @@ def plot_tAvg_comparison(plots, legends, savename, ani):
     plt.figure(figsize=(13,8))
 
     N = len(plots)
-    colors = plt.cm.viridis(np.linspace(0,1,N+1))
-    # colors = ['tab:blue', 'tab:red']
+    # colors = plt.cm.viridis(np.linspace(0,1,N+1))
+    # colors = ['teal', 'darkviolet']
 
     for k, plot in enumerate(plots):
 
@@ -847,7 +847,7 @@ def plot_tAvg_comparison(plots, legends, savename, ani):
         ys = [(y )/ys[0] for y in ys]
         xs = np.linspace(2.02, 4, len(ys))
 
-        plt.plot(xs, ys, label=legends[k], linewidth=3, color=colors[k])
+        plt.plot(xs, ys, label=legends[k], linewidth=3)#, color=colors[k])
         # plt.plot(xs, ys, label=str(leg), linewidth=3, color=colors[k])
 
     plt.xlabel('x (μm)')
@@ -922,7 +922,7 @@ def plot_magnon_dispersion_with_zoom(magnonDispersion, clim_max = 1000):
             ax1[i].title.set_text(titles[i])
 
         else:
-            ax1.imshow(final_result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto")#, clim=(0, clim_max))
+            ax1.imshow(final_result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
             ax1.set_xlabel(label)
             ax1.set_ylabel(ylabel)
 
@@ -930,7 +930,8 @@ def plot_magnon_dispersion_with_zoom(magnonDispersion, clim_max = 1000):
             axins = ax1.inset_axes(
                 [0.5, 0.5, 0.47, 0.47],
                 xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
-            axins.imshow(final_result, extent = [-k_max, k_max,f_min, f_max], origin='lower')
+            axins.imshow(final_result, extent = [-k_max, k_max,f_min, f_max], origin='lower', clim=(0,5000))
+            axins.set_yticks([0.0, 0.2, 0.4])
 
             ax1.indicate_inset_zoom(axins, edgecolor='black')
         
@@ -1790,36 +1791,45 @@ def main():
 
     # # # # # title = 'Normalized spin accumulation with/without MEC'
 
-    # f1 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x45/tAvg_damping0.0004_V-0.58_0.3K.txt'
-    # f2 = 'AFM/ex+ani+hard_axis/IP/cache/t_avg/4000x50x45/tAvg_damping0.0004_V-0.58_0.3K.txt'
+
+    #### Plot several <mxdmdt> in the same plot
+
+    Jc_dict = {5 : '-0.06', 10: '-0.12', 15 : '-0.18', 20 : '-0.25', 25 : '-0.32',
+                 30 : '-0.38', 35 : '-0.45', 40 : '-0.52', 45 : '-0.58'}
+    
+
+    this = 45
+
+    f1 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x' + str(this) + '/tAvg_damping0.0004_V' + Jc_dict[this] + '_0.3K.txt'
+    f2 = 'AFM/ex+ani+hard_axis+Hfield/IP/cache/t_avg/4000x50x' + str(this) + '/tAvg_damping0.0004_V' + Jc_dict[this] + '_0.3K.txt'
     # f3 = 'AFM/ex+ani/IP/cache/t_avg/3000x50x100/tAvg_damping0.0004_V-4.5_10K.txt'
     # f4 = 'AFM/ex+ani/IP/cache/t_avg/3000x50x100/tAvg_damping0.0004_V-4.5_20K.txt'
 
-    # l1 = 'Easy axis'
-    # l2 = 'Hard axis'
+    l1 = 'Easy-axis'
+    l2 = 'Easy-plane'
     # # l3 = '10'
     # l4 = '20'
 
-    # savename = 'AFM/ex+ani+hard_axis/IP/plots/custom/easy_vs_hard_comparison_9layer.png'
+    savename = 'AFM/ex+ani+hard_axis+Hfield/IP/plots/custom/easy_vs_hard_comparison_' + str(this/5) + 'layer.png'
 
-    # plot_tAvg_comparison([f1,f2], [l1,l2], savename, 'IP')
+    plot_tAvg_comparison([f1,f2], [l1,l2], savename, 'IP')
 
     # plot_dispersion([4000, 50, 5], 4e-4, 1, 'OOP', 'y')
 
-    # # # FOR DISPERSIONS DOWN HERE
+    # # # FOR DISPERSIONS HERE
 
-    f1 = 'AFM/ex+ani+hard_axis/IP/cache/dispersions/4000x50x5/diry_axisxgroundstate_damping0.0004_T0.3_dispersion.txt'
-    f2 = 'AFM/ex+ani+hard_axis/IP/cache/dispersions/4000x50x5/diry_axisxgroundstate_damping0.0004_T0.8_dispersion.txt'
-    f3 = 'AFM/ex+ani+hard_axis/IP/cache/dispersions/4000x50x5/diry_axisxgroundstate_damping0.0004_T3_dispersion.txt'
+    # f1 = 'AFM/ex+ani+hard_axis/IP/cache/dispersions/4000x50x5/diry_axisxgroundstate_damping0.0004_T0.3_dispersion.txt'
+    # f2 = 'AFM/ex+ani+hard_axis/IP/cache/dispersions/4000x50x5/diry_axisxgroundstate_damping0.0004_T0.8_dispersion.txt'
+    # f3 = 'AFM/ex+ani+hard_axis/IP/cache/dispersions/4000x50x5/diry_axisxgroundstate_damping0.0004_T3_dispersion.txt'
     # # f4 = 'IP/cache/dispersions/1000x50x150/steady/diry_axisx_dispersion.txt'
     # # f5 = 'IP/cache/dispersions/1000x50x190/steady/diry_axisx_dispersion.txt'
 
 
-    savename = 'AFM/ex+ani+hard_axis/IP/plots/custom/dispersion_temperature_comparison.png'
+    # savename = 'AFM/ex+ani+hard_axis/IP/plots/custom/dispersion_temperature_comparison.png'
 
-    plot_dispersions((f1,f2,f3), savename)
+    # plot_dispersions((f1,f2,f3), savename)
 
-    # ### DIFFUSION LENGTHS DOWN HERE
+    # ### DIFFUSION LENGTHS HERE
 
     # f1 = 'IP/cache/t_avg/4000x50x5/tAvg_damping0.0004_V-0.0115_mxdmdt.txt'
     # f2 = 'IP/cache/t_avg/4000x50x10/tAvg_damping0.0004_V-0.045_mxdmdt.txt'
