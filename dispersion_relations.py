@@ -75,7 +75,7 @@ def magnon_dispersion(ns, magnonDispersion):
         for i, output_filex in enumerate(output_files):
             # if axis == 'x':
             ns.dp_getexactprofile((np.array([magnonDispersion.cellsize/2, y_vals[i], magnonDispersion.meshdims[2]-magnonDispersion.cellsize])*1e-9), (np.array([magnonDispersion.meshdims[0] - magnonDispersion.cellsize/2, y_vals[i], magnonDispersion.meshdims[2]])*1e-9), magnonDispersion.cellsize*1e-9, 0)
-            if magnonDispersion.hard_axis and i == 1:
+            if magnonDispersion.hard_axis and i % 2 != 0:
                 ns.dp_div(3, Ms)
                 ns.dp_saveappendasrow(output_filex, 3)
             else:
@@ -83,7 +83,7 @@ def magnon_dispersion(ns, magnonDispersion):
                 ns.dp_saveappendasrow(output_filex, int_dir)
         time += time_step
 
-    plotting.plot_magnon_dispersion(magnonDispersion)
+    # plotting.plot_magnon_dispersion(magnonDispersion)
 
 def phonon_dispersion(meshdims, cellsize, t, damping, x_start, x_stop, MEC, ani, dir):
 
