@@ -7,80 +7,23 @@ from itertools import chain
 from scipy.optimize import curve_fit
 from scipy.fft import fft, fftfreq
 from scipy.signal import find_peaks
+from pathlib import Path
 
 plt.rcParams.update({'font.size': 26})
 
-path = 'C:/Users/mathimyh/master/master-boris/'
+path = Path(__file__).resolve().parent
 
-def plot_something(filename):
-
-    f = open(filename, 'r')
-
-    lines = f.readlines()
-
-    x = []
-
-    for i in range(len(lines)):
-        x.append(i)
-
-    plt.plot(x, lines)
-    plt.show()
-
-def SA_plotting(filename, plotname, title):
-
-    f = open(filename, 'r')
-
-    lines = f.readlines()
-
-    data = lines[70].strip()
-
-    data = data.split('\t')
-    data = data[1:]
-
-
-    # Calculate only one of the three dimensions
-    #
-    ys = []
-    i = 0
-    while i < len(data):
-        ys.append(float(data[i]))
-        i += 3
-
-    xs = []
-
-    for i in range(len(ys)):
-        xs.append(i)
-
-    plt.plot(xs, ys)
-    plt.show()
-    # plt.xlabel("Distance from injector (nm)")
-    # plt.ylabel("Spin accumulation in x-direction")
-    # plt.title(title)
-
-    # plotname = "plots/" + plotname
-    # plt.savefig(plotname, dpi=500)
-
-    # Total length of the vector
-
-    # ys = []
-
-    # for i in range(0, len(data), 3):
-    #     ys.append(np.sqrt(float(data[i])**2 + float(data[i+1])**2 + float(data[i+2])**2))
-
-    # xs = []
-
-    # for i in range(len(ys)):
-    #     xs.append(i)
-
-    # plt.plot(xs, ys)
-    # plt.xlabel("Distance from injector (nm)")
-    # plt.ylabel("Spin accumulation")
-    # plt.title(title)
-
-    # plotname = "plots/" + plotname
-    # plt.savefig(plotname, dpi=500)
+#### MAGNON TRANSPORT PLOTS ###
 
 def plot_plateau(steadystate):
+
+    '''
+    
+    Plots <mxdmdt> over time for a magnon transport simulation that starts in the ground state. This function
+    is used to find the plateau of <mxdmdt>, i.e. when/if steady state is found. The result is several plots
+    at different x-positions in the mesh, given by steadystate.x_vals
+
+    '''
 
     filename = steadystate.cachename()
     f = open(filename, 'r')
@@ -145,10 +88,15 @@ def plot_plateau(steadystate):
 
 def plot_tAvg_SA(timeAvgSA):
 
+    '''
+    
+    The standard function for plotting <mxdmdt> over distance in magnon transport simulations. 
+
+    '''
+
     plt.figure(figsize=(10, 7))
 
     filename = timeAvgSA.cachename()
-    # filename_2D = type + '/' + modules_folder + ani + '/cache/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/2D_tAvg_damping' + str(damping) + '_V' + str(V) + '_' + str(T) + 'K.txt'
 
     if os.path.isfile(filename):
         f = open(filename, 'r')
@@ -240,9 +188,17 @@ def plot_tAvg_SA(timeAvgSA):
     plotname = timeAvgSA.plotname()
     params.make_folder(plotname)
     plt.savefig(plotname, dpi=600)
-    # plt.show()
+    plt.show()
 
 def plot_tAvg_SA_underneath(meshdims, cellsize, t, V, damping, MEC, ani, T, type, x_start, x_stop):
+
+    '''
+    
+    Similar function to the standard, but plots <mxdmdt> at the bottom of the system instead of the top.
+
+    NOTE: This function should be updated to the object-oriented version.
+    
+    '''
 
     plt.figure(figsize=(10, 7))
 
@@ -352,6 +308,14 @@ def plot_tAvg_SA_underneath(meshdims, cellsize, t, V, damping, MEC, ani, T, type
 
 def plot_tAvg_SA_2D(meshdims, cellsize, t, V, damping, data, x_start, x_stop, MEC, ani):
 
+    '''
+    
+    Similar function to the standard, but plots <mxdmdt> as a 2D heatmap of the system (along x and z) instead of the top.
+
+    NOTE: This function should be updated to the object-oriented version.
+    
+    '''
+
     mec_folder = ''
     if MEC:
         mec_folder = 'MEC/'
@@ -411,6 +375,14 @@ def plot_tAvg_SA_2D(meshdims, cellsize, t, V, damping, data, x_start, x_stop, ME
 
 def plot_tAvg_SA_2D_y(meshdims, cellsize, t, V, damping, data, x_start, x_stop, MEC, ani):
 
+    '''
+    
+    Similar function to the standard 2D, but plots a 2D heatmap along x and y direction.
+
+    NOTE: This function should be updated to the object-oriented version.
+    
+    '''
+
     mec_folder = ''
     if MEC:
         mec_folder = 'MEC/'
@@ -469,6 +441,15 @@ def plot_tAvg_SA_2D_y(meshdims, cellsize, t, V, damping, data, x_start, x_stop, 
     plt.show()
 
 def plot_tAvg_SA_2D_subplots(meshdims, cellsize, t, V, damping, data, x_start, x_stop, MEC, ani):
+    
+    '''
+    
+    Plots several 2D magnon transport systems in the same figure.
+
+    NOTE: This function should be updated to the object-oriented version.
+    
+    '''
+    
     mec_folder = ''
     if MEC:
         mec_folder = 'MEC/'
@@ -527,6 +508,14 @@ def plot_tAvg_SA_2D_subplots(meshdims, cellsize, t, V, damping, data, x_start, x
     plt.show()
 
 def plot_tAvg_SA_z(meshdims, cellsize, t, V, damping, MEC, ani, T, type):
+
+    '''
+    
+    Similar function to the standard, but plots <mxdmdt> along z-direction directly underneath the injector.
+
+    NOTE: This function should be updated to the object-oriented version.
+    
+    '''
 
     plt.figure(figsize=(10, 7))
 
@@ -635,6 +624,14 @@ def plot_tAvg_SA_z(meshdims, cellsize, t, V, damping, MEC, ani, T, type):
     # plt.show()
 
 def plot_tAvg_comparison_with_reference(plots, legends, savename, ani):
+
+    '''
+    
+    Function for a very specific plot.
+
+    NOTE: This function should be updated to the object-oriented version.
+    
+    '''
 
     indexer = 0
     plt.figure(figsize=(13,8))
@@ -785,6 +782,12 @@ def plot_tAvg_comparison_with_reference(plots, legends, savename, ani):
 
 def plot_tAvg_comparison(plots, legends, savename, ani):
 
+    '''
+    
+    Plots several systems in the same plot for comparison of spin diffusion lengths.
+    
+    '''
+
     plt.figure(figsize=(13,8))
 
     N = len(plots)
@@ -859,7 +862,18 @@ def plot_tAvg_comparison(plots, legends, savename, ani):
     plt.savefig(savename, dpi=600)
     plt.show()
 
+
+#### MAGNON DISPERSION PLOTS ####
+
 def plot_magnon_dispersion_with_zoom(magnonDispersion, clim_max = 1000):
+
+    '''
+    
+    Plot the magnon dispersion of a given system, including a zoom-in on an area, usually
+    the gap. In the case of easy-plane, y and z components are superimposed on the same plot
+    
+    '''
+
 
     if magnonDispersion.type == 'AFM':
         time_step = 0.1e-12
@@ -945,6 +959,13 @@ def plot_magnon_dispersion_with_zoom(magnonDispersion, clim_max = 1000):
     plt.show()
 
 def plot_magnon_dispersion(magnonDispersion, clim_max = 1000):
+
+    '''
+    
+    Plot the magnon dispersion of a given system. In the case of easy-plane, the y and z components
+    are superimposed on the same plot. 
+
+    '''
 
     if magnonDispersion.type == 'AFM':
         time_step = 0.1e-12
@@ -1081,7 +1102,107 @@ def plot_magnon_dispersion(magnonDispersion, clim_max = 1000):
 
     # plt.show()
 
-def plot_magnon_dispersion_overlay(magnonDispersion, clim_max = 1000):
+def plot_magnon_dispersion_triple_with_zoom(magnonDispersion, clim_max = 1000):
+
+    '''
+    
+    Plot 3 magnon dispersion plots horizontally in the same figure, including a zoom-in on an area.
+    Mostly used for comparison between magnon dispersion at different y-values in the system.
+    
+    '''
+
+    # FM and AFM range in different frequencies
+    if magnonDispersion.type == 'AFM':
+        time_step = 0.1e-12
+        ylabel = 'f (THz)'
+        divisor = 1e12
+    elif magnonDispersion.type == 'FM':
+        time_step = 1e-12
+        ylabel = 'f (GHz)'
+        divisor = 1e9
+
+    output_files = magnonDispersion.cachename()
+    savename = magnonDispersion.plotname()
+    
+    fig, ax = plt.subplots(1,3)
+
+    fig.set_figheight(5)
+    fig.set_figwidth(16)
+    yvals =[5,25,45]
+
+    # If hard axis then two consecutive files are y and x components
+    # Then they need to be superimposed on the same plot
+    loops = 1
+    if magnonDispersion.hard_axis:
+        loops = 2
+    
+    # Loop over the output files 
+    for i in range(0, int(len(output_files)), loops):
+
+        results = []
+
+        # Add both y and z component to the results list if hard axis
+        # If easy axis then just the given component
+        for j in range(loops):
+            pos_time = np.loadtxt(output_files[i+j-1])
+
+            fourier_data = np.fft.fftshift(np.abs(np.fft.fft2(pos_time)))
+
+            freq_len = len(fourier_data)
+            k_len = len(fourier_data[0])
+            freq = np.fft.fftfreq(freq_len, time_step)
+            kvector = np.fft.fftfreq(k_len, 5e-9)
+
+            k_max = 2*np.pi*kvector[int(0.5 * len(kvector))]*5e-9
+            f_min = np.abs(freq[0])
+            f_max = np.abs(freq[int(0.5 * len(freq))])/divisor # THz for FM and GHz for FM
+            f_points = int(0.5 * freq_len)
+
+            result = np.array([fourier_data[i] for i in range(int(0.5 *freq_len),freq_len)])
+            results.append(result)
+
+        if loops == 2:
+            final_result = results[0] + results[1]
+        else:
+            final_result = results[0]
+
+        index = int(i/loops)
+
+        ax[index].imshow(final_result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
+
+        label = 'q' + magnonDispersion.axis
+
+        ax[index].set_xlabel(label)
+        ax[index].set_ylabel(ylabel)
+        title = r'y = ' + str(yvals[index]*1e-3) + ' $\mu$m'
+        ax[index].title.set_text(title)
+
+        x1, x2, y1, y2 = -0.25, 0.25, 0, 0.5
+        axins = ax[index].inset_axes(
+            [0.5, 0.4, 0.47, 0.47],
+            xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
+        axins.imshow(final_result, extent = [-k_max, k_max,f_min, f_max], origin='lower', clim=(0,5000))
+
+        ax[index].indicate_inset_zoom(axins, edgecolor='black')
+
+
+    folder_name = '/'.join(savename.split('/')[:-2])
+    if not os.path.exists(folder_name):
+        os.makedirs(folder_name)
+
+    plt.tight_layout()
+
+    plt.savefig(savename, dpi=600)
+
+    plt.show()
+
+def plot_magnon_dispersion_separate(magnonDispersion, clim_max = 1000):
+
+    '''
+
+    Plot both y and z component of a magnon dispersion in the same plot. 
+    
+    '''
 
     if magnonDispersion.type == 'AFM':
         time_step = 0.1e-12
@@ -1150,6 +1271,14 @@ def plot_magnon_dispersion_overlay(magnonDispersion, clim_max = 1000):
     plt.show()
 
 def plot_phonon_dispersion(meshdims, damping, MEC, ani, dir,time_step):
+
+    '''
+    
+    Plots the phonon-dispersion of a system. Since phonons are only excited by MEC, the results are not reliable.
+
+    NOTE: This function should be updated to the object-oriented version.
+    
+    '''
 
     mec_folder = ''
     if MEC:
@@ -1228,6 +1357,12 @@ def plot_phonon_dispersion_specific(output_file, savename, time_step):
     plt.show()
 
 def plot_dispersions(plots, savename):
+
+    '''
+    
+    Plots several magnon dispersion relations in the same figure (subplots). Titles and such must be specified. 
+    
+    '''
 
     dim1 = 0
     dim2 = 0
@@ -1310,6 +1445,9 @@ def plot_dispersions(plots, savename):
 
 
     plt.show()
+
+
+#### MISCELLANEOUS ####
 
 def plot_trajectory(meshdims, damping, MEC, ani, dir):
 
@@ -1399,8 +1537,14 @@ def plot_critical_T(criticalT):
     plt.savefig(savename, dpi=600)
     plt.show()
 
-def plot_diffusion_length(plots, ts, savename, ani):
+def plot_diffusion_length(plots, ts, savename, ani, thickness):
     
+    '''
+    
+    Plots the spin diffusion lengths of given magnon transport simulations. ts are the values that is compared between them
+    
+    '''
+
     plt.figure(figsize=(10,7))
 
 
@@ -1411,75 +1555,75 @@ def plot_diffusion_length(plots, ts, savename, ani):
 
     for k, plot in enumerate(plots):
 
-        f = open(plot, 'r')
+        try:
+            f = open(plot, 'r')
+        except:
+            print('No file for V = ', -ts[k])
+        else:
+            plat = plot.split('/')[-1]
+            temps = plat.split('_')
+            temp = temps[2]
 
-        plat = plot.split('/')[-1]
-        temps = plat.split('_')
-        temp = temps[2]
-        V = float(temp[1:])
+            lines = f.readlines()
+            lines = lines[10:]
 
-        lines = f.readlines()
-        lines = lines[10:]
+            vals = []
 
-        vals = []
+            for i in range(len(lines)):
+                vec1 = lines[i].split('\t')
+                all_vals = vec1[1:]
+                ani_int = 0
+                if ani == 'OOP':
+                    ani_int = 2
+                temp = []
+                while ani_int < len(all_vals):
+                    temp.append(float(all_vals[ani_int]))
+                    ani_int += 3
+                vals.append(temp)
 
-        for i in range(len(lines)):
-            vec1 = lines[i].split('\t')
-            all_vals = vec1[1:]
-            ani_int = 0
-            if ani == 'OOP':
-                ani_int = 2
-            temp = []
-            while ani_int < len(all_vals):
-                temp.append(float(all_vals[ani_int]))
-                ani_int += 3
-            vals.append(temp)
+            ys = []
 
-        ys = []
-
-        for i in range(len(vals[0])):
-            val = 0
-            for j in range(len(vals)):
-                val += float(vals[j][i])
-            val /= len(vals)
-            ys.append(val)
+            for i in range(len(vals[0])):
+                val = 0
+                for j in range(len(vals)):
+                    val += float(vals[j][i])
+                val /= len(vals)
+                ys.append(val)
 
 
-        # if len(ys) > 1980:
-        #     ys = ys[len(ys)-1980:]
+            # ys = [(((y )/abs(ys[0]))) for y in ys]
+            # min_y = min(ys)
+            # ys =[y + abs(min_y) for y in ys]
+            
 
-        # ys = [(y) / ys[int(len(ys)/2)]  for y in ys]
-        # if k == 0:
-        #     ys = ys[int(len(ys)/2):int(3*len(ys)/4)]
-        #     xs = np.linspace(2.02, 3, len(ys))
-        # else:
-        #     ys = ys[int(len(ys)/2):]
-        #     xs = np.linspace(2.02, 2.5, len(ys))
+            # When <mxdmdt> flattens out we get NaN and inf after doing the logarithm. 
+            # This needs to be removed
+            # From looking at the data, it seems to be fine to just find the 
+            # slope from the first half of ys, as the end point introduces lots of noise
+            ys = np.array([np.log(p) for p in ys])
+            ys = ys[np.isfinite(ys)]
+            ys = ys[:int(len(ys)/2)]
+            xs = np.linspace(0, 2, len(ys))
 
-        # if k == 0:
-        #     ys = ys[int(len(ys)/2):]
+            def f(x, a, b):
+                return a - b*x   
 
-        ys = [(((y )/ys[0])) for y in ys]
-        min_y = min(ys)
-        ys =[y + min_y for y in ys]
-        xs = np.linspace(0, 1.98, len(ys))
+            try:
+                params, params_cov = curve_fit(f, xs, ys)
+                plt.plot(10e3*ts[k]/thickness, 1/params[1], marker='v', markersize = 10, color='black')
+            except TypeError:
+                print('Could not find a curve for this voltage: ', ts[k])
+            except ValueError:
+                print('ydata was empty for this voltage: ', ts[k])
 
-        # def f(x, a, b):
-        #     return a + np.exp(b* x**2)
-
-        # params, params_cov = curve_fit(f, xs, ys)
-
-        def f(x, a, b):
-            return a - b*x   
-
-        params, params_cov = curve_fit(f, xs, ys)
-
-        plt.plot(ts[k], params[1], marker='v', markersize = 10, color='black')
+        # plt.plot(ts[k], params[1], marker='v', markersize = 10, color='black')
         # plt.plot(f(xs, params[0], params[1]), xs, color=colors[k])
         # plt.plot(xs, ys, color=colors[k])
 
-    plt.xlabel('Thickness (layers)')
-    plt.ylabel(r'$L_d$ (μm)')
+        
+
+    plt.xlabel(r'Voltage/thickness (V/nm)')
+    plt.ylabel(r'$L_d$')
 
     plt.tight_layout()
     plt.savefig(savename, dpi=600)
@@ -1756,43 +1900,8 @@ def fft_transport_underneath(meshdims, cellsize, t, V, damping, MEC, ani, T, typ
 
 def main():
 
-    # f1 = 'AFM/ex+ani/IP/underneath/cache/t_avg/4000x50x5/tAvg_damping0.0004_V-0.06_0.3K.txt'
-    # f2 = 'AFM/ex+ani/IP/underneath/cache/t_avg/4000x50x10/tAvg_damping0.0004_V-0.12_0.3K.txt'
-    # f3 = 'AFM/ex+ani/IP/underneath/cache/t_avg/4000x50x15/tAvg_damping0.0004_V-0.18_0.3K.txt'
-    # f4 = 'AFM/ex+ani/IP/underneath/cache/t_avg/4000x50x20/tAvg_damping0.0004_V-0.25_0.3K.txt'
-    # f5 = 'AFM/ex+ani/IP/underneath/cache/t_avg/4000x50x25/tAvg_damping0.0004_V-0.32_0.3K.txt'
-    # f6 = 'AFM/ex+ani/IP/underneath/cache/t_avg/4000x50x30/tAvg_damping0.0004_V-0.38_0.3K.txt'
-    # f7 = 'AFM/ex+ani/IP/underneath/cache/t_avg/4000x50x35/tAvg_damping0.0004_V-0.45_0.3K.txt'
-    # f8 = 'AFM/ex+ani/IP/underneath/cache/t_avg/4000x50x40/tAvg_damping0.0004_V-0.52_0.3K.txt'
-    # f9 = 'AFM/ex+ani/IP/underneath/cache/t_avg/4000x50x45/tAvg_damping0.0004_V-0.58_0.3K.txt'
-    # f10 = 'AFM/ex+ani/IP/underneath/cache/t_avg/4000x50x50/tAvg_damping0.0004_V-0.63_0.3K.txt'
 
-
-    # f1 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x5/tAvg_damping0.0004_V-0.06_0.3K.txt'
-    # f2 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x10/tAvg_damping0.0004_V-0.12_0.3K.txt'
-    # f3 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x15/tAvg_damping0.0004_V-0.18_0.3K.txt'
-    # f4 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x20/tAvg_damping0.0004_V-0.25_0.3K.txt'
-    # f5 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x25/tAvg_damping0.0004_V-0.32_0.3K.txt'
-    # f6 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x30/tAvg_damping0.0004_V-0.38_0.3K.txt'
-    # f7 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x35/tAvg_damping0.0004_V-0.45_0.3K.txt'
-    # f8 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x40/tAvg_damping0.0004_V-0.52_0.3K.txt'
-    # f9 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x45/tAvg_damping0.0004_V-0.58_0.3K.txt'
-
-    # l1 = '1'
-    # l2 = '2'
-    # l3 = '3'
-    # l4 = '4'
-    # l5 = '5'
-    # l6 = '6'
-    # l7 = '7'
-    # l8 = '8'
-    # l9 = '9'
-    # l10 ='10'
-
-    # # # # # title = 'Normalized spin accumulation with/without MEC'
-
-
-    #### Plot several <mxdmdt> in the same plot
+    #### MAGNON TRANSPORT ### 
 
     Jc_dict = {5 : '-0.06', 10: '-0.12', 15 : '-0.18', 20 : '-0.25', 25 : '-0.32',
                  30 : '-0.38', 35 : '-0.45', 40 : '-0.52', 45 : '-0.58'}
@@ -1812,11 +1921,10 @@ def main():
 
     savename = 'AFM/ex+ani+hard_axis+Hfield/IP/plots/custom/easy_vs_hard_comparison_' + str(this/5) + 'layer.png'
 
-    plot_tAvg_comparison([f1,f2], [l1,l2], savename, 'IP')
+    # plot_tAvg_comparison([f1,f2], [l1,l2], savename, 'IP')
 
-    # plot_dispersion([4000, 50, 5], 4e-4, 1, 'OOP', 'y')
 
-    # # # FOR DISPERSIONS HERE
+    ### DISPERSIONS ###
 
     # f1 = 'AFM/ex+ani+hard_axis/IP/cache/dispersions/4000x50x5/diry_axisxgroundstate_damping0.0004_T0.3_dispersion.txt'
     # f2 = 'AFM/ex+ani+hard_axis/IP/cache/dispersions/4000x50x5/diry_axisxgroundstate_damping0.0004_T0.8_dispersion.txt'
@@ -1829,23 +1937,26 @@ def main():
 
     # plot_dispersions((f1,f2,f3), savename)
 
-    # ### DIFFUSION LENGTHS HERE
+    ### DIFFUSION LENGTHS ###
 
-    # f1 = 'IP/cache/t_avg/4000x50x5/tAvg_damping0.0004_V-0.0115_mxdmdt.txt'
-    # f2 = 'IP/cache/t_avg/4000x50x10/tAvg_damping0.0004_V-0.045_mxdmdt.txt'
-    # f3 = 'IP/cache/t_avg/4000x50x15/tAvg_damping0.0004_V-0.12_mxdmdt.txt'
-    # f4 = 'IP/cache/t_avg/4000x50x20/tAvg_damping0.0004_V-0.25_mxdmdt.txt'
-    # f5 = 'IP/cache/t_avg/4000x50x25/tAvg_damping0.0004_V-0.4_mxdmdt.txt'
-    # f6 = 'IP/cache/t_avg/4000x50x30/tAvg_damping0.0004_V-0.53_mxdmdt.txt'
-    # f7 = 'IP/cache/t_avg/4000x50x35/tAvg_damping0.0004_V-0.63_mxdmdt.txt'
-    # f8 = 'IP/cache/t_avg/4000x50x40/tAvg_damping0.0004_V-0.73_mxdmdt.txt'
-    # f9 = 'IP/cache/t_avg/4000x50x45/tAvg_damping0.0004_V-0.8_mxdmdt.txt'
+    thickness = 5
+    easy_plane = 0
 
-    # ts = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    fs = []
+    ts = []
+    factor = thickness/20
+    easy_plane_string = ''
+    if easy_plane:
+        easy_plane_string = '+hard_axis+Hfield'
+    for i in range(27):
+        voltage = (i+1)*0.025
+        ts.append(voltage*factor)
+        plotname = 'AFM/ex+ani' + easy_plane_string + f'/IP/cache/t_avg/4000x50x{thickness}/tAvg_damping0.0004_V-{voltage*factor:.3f}_0.3K.txt'
+        fs.append(plotname)
 
-    # savename = 'AFM/ex+ani/IP/plots/custom/diffusionlengths_constant_Jc_over_d_1.1e8.png'
+    savename = 'AFM/ex+ani' + easy_plane_string + f'/IP/plots/custom/voltage_dependence_diffusion_lengths_{int(thickness/5)}layer.png'
 
-    # plot_diffusion_length([f1,f2,f3,f4,f5,f6,f7,f8,f9], ts, savename, 'IP')
+    plot_diffusion_length(fs, ts, savename, 'IP', thickness)
 
 
 if __name__ == '__main__':
