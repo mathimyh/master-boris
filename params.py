@@ -21,7 +21,7 @@ class Params:
         self.meshdims = meshdims
         self.cellsize = cellsize
         self.t = t
-        self.V = V
+        self.V = round(V, 3)
         self.damping = damping
         self.MEC = MEC
         self.ani = ani
