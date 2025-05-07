@@ -49,7 +49,7 @@ class TimeAvgSA(Params):
         self.x_stop = x_stop
 
     def simname(self):
-        return path + self.type + '/' + self.modules_folder + self.ani + '/sims/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + f"_V{self.V:.3f}" + '_damping' + str(self.damping) + '_' + str(self.T) + 'K_steady_state.bsm'
+        return path + self.type + '/' + self.modules_folder + self.ani + '/sims/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2])  + f"/V{self.V:.3f}" + '_damping' + str(self.damping) + '_' + str(self.T) + 'K_steady_state.bsm'
 
     def cachename(self):
         return path + self.type + '/' + self.modules_folder + self.ani + '/cache/' + 't_avg/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/tAvg_damping' + str(self.damping) + f"_V{self.V:.3f}" + '_' + str(self.T) + 'K.txt'
@@ -64,7 +64,7 @@ class Steadystate(Params):
         self.x_vals = x_vals
 
     def simname(self):
-        return path + self.type + '/' + self.modules_folder + self.ani + '/sims/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + f"_V{self.V:.3f}" + '_damping' + str(self.damping) + '_' + str(self.T) + 'K_steady_state.bsm'
+        return path + self.type + '/' + self.modules_folder + self.ani + '/sims/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + f"/V{self.V:.3f}" + '_damping' + str(self.damping) + '_' + str(self.T) + 'K_steady_state.bsm'
 
     def cachename(self):
         return path + self.type + '/' + self.modules_folder + self.ani + '/cache/plateau/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/plateau_' + f"_V{self.V:.3f}" + '_damping' + str(self.damping) + '_' + str(self.T) + 'K.txt'
@@ -83,7 +83,7 @@ class MagnonDispersion(Params):
         self.triple = triple
 
     def simname(self):
-        return path + self.type + '/' + self.modules_folder + self.ani + '/sims/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + f"_V{self.V:.3f}" + '_damping' + str(self.damping) + '_' + str(self.T) + 'K_steady_state.bsm'
+        return path + self.type + '/' + self.modules_folder + self.ani + '/sims/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + f"/V{self.V:.3f}" + '_damping' + str(self.damping) + '_' + str(self.T) + 'K_steady_state.bsm'
 
     def cachename(self):
         if not self.steadystate:
