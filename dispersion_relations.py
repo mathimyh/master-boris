@@ -2,7 +2,6 @@ import sys
 import os
 sys.path.insert(0, 'C:/users/mathimyh/documents/boris data/borispythonscripts/')
 
-from NetSocks import NSClient   # type: ignore
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -10,8 +9,6 @@ from pathlib import Path
 import plotting
 import transport
 import params
-
-path = 'C:/Users/mathimyh/master/master-boris/'
 
 def magnon_dispersion(ns, magnonDispersion):
 

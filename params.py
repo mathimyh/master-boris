@@ -1,5 +1,7 @@
-path = 'C:/Users/mathimyh/master/master-boris/'
 import os
+from pathlib import Path
+
+path = str(Path(__file__).resolve().parent) + '/'
 
 def make_folder(filepath):
     folder_name = '/'.join(filepath.split('/')[:-1])
@@ -10,7 +12,7 @@ def check_file_exists(filepath):
     try:
         open(filepath, 'r')
     except FileNotFoundError:
-        raise Exception('No simulations have been done with these parameters.')
+        print('No simulations have been done with these parameters.')
 
 class Params:
     
@@ -55,7 +57,7 @@ class TimeAvgSA(Params):
         return path + self.type + '/' + self.modules_folder + self.ani + '/cache/' + 't_avg/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/tAvg_damping' + str(self.damping) + f"_V{self.V:.3f}" + '_' + str(self.T) + 'K.txt'
     
     def plotname(self):
-        return path + self.type + '/' + self.modules_folder + self.ani + '/plots/' + 't_avg/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/tAvg_damping' + str(self.damping) + f"_V{self.V:.3f}" + '_' + str(self.T) + 'K.png'
+        return self.type + '/' + self.modules_folder + self.ani + '/plots/' + 't_avg/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/tAvg_damping' + str(self.damping) + f"_V{self.V:.3f}" + '_' + str(self.T) + 'K.png'
     
 class Steadystate(Params):
 
