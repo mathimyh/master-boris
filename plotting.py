@@ -1,17 +1,15 @@
 import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
 import numpy as np
-from textwrap import wrap
 import os
 import params
-from itertools import chain
+import ruptures as rpt
 from scipy.optimize import curve_fit
 from scipy.fft import fft, fftfreq
 from scipy.signal import find_peaks
-from pathlib import Path
 
 plt.rcParams.update({'font.size': 26})
 
-path = Path(__file__).resolve().parent
 
 #### MAGNON TRANSPORT PLOTS ###
 
@@ -83,7 +81,7 @@ def plot_plateau(steadystate):
     params.make_folder(plotname)
     fig.suptitle('<mxdmdt> over time')
     fig.tight_layout()
-    fig.savefig(plotname, dpi=600)
+    fig.savefig(plotname, dpi=500)
     plt.show()
 
 def plot_tAvg_SA(timeAvgSA):
@@ -98,39 +96,8 @@ def plot_tAvg_SA(timeAvgSA):
 
     filename = timeAvgSA.cachename()
 
-    if os.path.isfile(filename):
+    try:
         f = open(filename, 'r')
-
-        lines = f.readlines()
-        lines = lines[10:]
-
-        xs = np.linspace(timeAvgSA.x_start/1000, timeAvgSA.x_stop/1000, int((timeAvgSA.x_stop - timeAvgSA.x_start)/timeAvgSA.cellsize))
-
-        vals = []
-
-
-        for line in lines:
-            # This is the component we look at. In plane means x-component (0) and out-of-plane means z (2)
-            direction = 0
-            if timeAvgSA.ani == 'OOP':
-                direction = 2
-            vec = line.split('\t')
-            all_vals = vec[1:]
-            temp = []
-            while direction < len(all_vals):
-                temp.append(float(all_vals[direction]))
-                direction += 3
-            vals.append(temp)
-
-
-        ys = []
-
-        for i in range(len(vals[0])):
-            val = 0
-            for j in range(len(vals)):
-                val += float(vals[j][i])
-            val /= len(vals)
-            ys.append(val)
 
     # elif os.path.isfile(filename_2D):
     #     f = open(filename_2D, 'r')
@@ -176,20 +143,53 @@ def plot_tAvg_SA(timeAvgSA):
     #     ys = [tAvg_data[0][i] for i in range(len(tAvg_data[0]))]
     #     xs = np.linspace(x_start, x_stop/1000, len(ys))
 
+    except FileNotFoundError:
+        print("No simulations have been done with these params... V = ", timeAvgSA.V)
+
     else:
-        print("No simulations have been done with these params")
-        exit()
+        lines = f.readlines()
+        lines = lines[10:]
 
-    plt.plot(xs, ys, linewidth=2)
-    plt.xlabel(r'$x$ $(\mu m)$')
-    plt.ylabel(r'$\mu_x$')
-    plt.tight_layout()
+        xs = np.linspace(timeAvgSA.x_start/1000, timeAvgSA.x_stop/1000, int((timeAvgSA.x_stop - timeAvgSA.x_start)/timeAvgSA.cellsize))
 
-    plotname = timeAvgSA.plotname()
-    params.make_folder(plotname)
-    plt.savefig(plotname, dpi=600)
-    plt.show()
+        vals = []
 
+
+        for line in lines:
+            # This is the component we look at. In plane means x-component (0) and out-of-plane means z (2)
+            direction = 0
+            if timeAvgSA.ani == 'OOP':
+                direction = 2
+            vec = line.split('\t')
+            all_vals = vec[1:]
+            temp = []
+            while direction < len(all_vals):
+                temp.append(float(all_vals[direction]))
+                direction += 3
+            vals.append(temp)
+
+
+        ys = []
+
+        for i in range(len(vals[0])):
+            val = 0
+            for j in range(len(vals)):
+                val += float(vals[j][i])
+            val /= len(vals)
+            ys.append(val)
+            
+        plt.plot(xs, ys, linewidth=2)
+        plt.xlabel(r'$x$ $(\mu m)$')
+        plt.ylabel(r'$\mu_x$')
+        plt.tight_layout()
+
+        plotname = timeAvgSA.plotname()
+        params.make_folder(plotname)
+        plt.savefig(plotname, dpi=500)
+        
+        plt.close()
+        # plt.show()
+        
 def plot_tAvg_SA_underneath(meshdims, cellsize, t, V, damping, MEC, ani, T, type, x_start, x_stop):
 
     '''
@@ -303,7 +303,7 @@ def plot_tAvg_SA_underneath(meshdims, cellsize, t, V, damping, MEC, ani, T, type
     plt.tight_layout()
 
     plotname = type + '/' + modules_folder + ani + '/underneath/plots/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/tAvg_damping' + str(damping) + '_V' + str(V) + '_' + str(T) + 'K.png'
-    plt.savefig(plotname, dpi=600)
+    plt.savefig(plotname, dpi=500)
     # plt.show()
 
 def plot_tAvg_SA_2D(meshdims, cellsize, t, V, damping, data, x_start, x_stop, MEC, ani):
@@ -620,7 +620,7 @@ def plot_tAvg_SA_z(meshdims, cellsize, t, V, damping, MEC, ani, T, type):
     plt.tight_layout()
 
     plotname = type + '/' + modules_folder + ani + '/plots/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/z_dir_tAvg_damping' + str(damping) + '_V' + str(V) + '_' + str(T) + 'K.png'
-    plt.savefig(plotname, dpi=600)
+    plt.savefig(plotname, dpi=500)
     # plt.show()
 
 def plot_tAvg_comparison_with_reference(plots, legends, savename, ani):
@@ -777,7 +777,7 @@ def plot_tAvg_comparison_with_reference(plots, legends, savename, ani):
     # plt.legend(title= r'$\mu$ value underneath injector ($10^{11}$)')
     plt.legend(title='Thickness (layers)')
 
-    plt.savefig(savename, dpi=600)
+    plt.savefig(savename, dpi=500)
     plt.show()
 
 def plot_tAvg_comparison(plots, legends, savename, ani):
@@ -859,7 +859,7 @@ def plot_tAvg_comparison(plots, legends, savename, ani):
     # plt.legend(title= r'$\mu$ value underneath injector ($10^{11}$)')
     plt.legend(title='Thickness (layers)')
 
-    plt.savefig(savename, dpi=600)
+    plt.savefig(savename, dpi=500)
     plt.show()
 
 
@@ -954,7 +954,7 @@ def plot_magnon_dispersion_with_zoom(magnonDispersion, clim_max = 1000):
 
         plt.tight_layout()
 
-    plt.savefig(savename, dpi=600)
+    plt.savefig(savename, dpi=500)
 
     plt.show()
 
@@ -1098,9 +1098,9 @@ def plot_magnon_dispersion(magnonDispersion, clim_max = 1000):
         if not os.path.exists(folder_name):
             os.makedirs(folder_name)
 
-    plt.savefig(savename, dpi=600)
+    plt.savefig(savename, dpi=500)
 
-    # plt.show()
+    plt.show()
 
 def plot_magnon_dispersion_triple_with_zoom(magnonDispersion, clim_max = 1000):
 
@@ -1123,11 +1123,12 @@ def plot_magnon_dispersion_triple_with_zoom(magnonDispersion, clim_max = 1000):
 
     output_files = magnonDispersion.cachename()
     savename = magnonDispersion.plotname()
+    params.make_folder(savename)
     
     fig, ax = plt.subplots(1,3)
 
-    fig.set_figheight(5)
-    fig.set_figwidth(16)
+    fig.set_figheight(4)
+    fig.set_figwidth(12)
     yvals =[5,25,45]
 
     # If hard axis then two consecutive files are y and x components
@@ -1185,14 +1186,9 @@ def plot_magnon_dispersion_triple_with_zoom(magnonDispersion, clim_max = 1000):
 
         ax[index].indicate_inset_zoom(axins, edgecolor='black')
 
-
-    folder_name = '/'.join(savename.split('/')[:-2])
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
-
     plt.tight_layout()
 
-    plt.savefig(savename, dpi=600)
+    plt.savefig(savename, dpi=500)
 
     plt.show()
 
@@ -1266,7 +1262,7 @@ def plot_magnon_dispersion_separate(magnonDispersion, clim_max = 1000):
 
     plt.tight_layout()
 
-    plt.savefig(savename, dpi=600)
+    plt.savefig(savename, dpi=500)
 
     plt.show()
 
@@ -1319,7 +1315,7 @@ def plot_phonon_dispersion(meshdims, damping, MEC, ani, dir,time_step):
 
     savename = ani + '/plots/' + mec_folder + 'dispersions/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/damping' + str(damping) + 'dir' + dir + '_phonon_dispersion.png'
 
-    plt.savefig(savename, dpi=600)
+    plt.savefig(savename, dpi=500)
 
     plt.show()
 
@@ -1352,7 +1348,7 @@ def plot_phonon_dispersion_specific(output_file, savename, time_step):
 
     plt.tight_layout()
 
-    plt.savefig(savename, dpi=600)
+    plt.savefig(savename, dpi=500)
 
     plt.show()
 
@@ -1441,7 +1437,7 @@ def plot_dispersions(plots, savename):
     # fig.subplots_adjust(wspace=0.03)
     
 
-    plt.savefig(savename, dpi=600)
+    plt.savefig(savename, dpi=500)
 
 
     plt.show()
@@ -1498,7 +1494,7 @@ def plot_trajectory(meshdims, damping, MEC, ani, dir):
         os.makedirs(folder_name)
 
     savename = ani + '/plots/' + mec_folder + 'trajectory/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/damping' + str(damping) + '_' + dir + '_trajectory.png'
-    plt.savefig(savename, dpi=600)
+    plt.savefig(savename, dpi=500)
     plt.show()
 
 def plot_critical_T(criticalT):
@@ -1534,14 +1530,470 @@ def plot_critical_T(criticalT):
     plt.xlabel(r'Temperature ($K$)')
     plt.ylabel(r'|${m}_{x}$|')
     plt.tight_layout()
-    plt.savefig(savename, dpi=600)
+    plt.savefig(savename, dpi=500)
+    plt.show()
+
+def plot_diffusion_length_all_systems(all_plots, all_ts, savename, ani):
+    '''
+    
+    Plots the spin diffusion lengths of given magnon transport simulations. 
+    Used for all systems in the same figure
+    ts are the values that is compared between them
+    
+    '''
+    
+    
+    plt.figure(figsize=(10,7))
+    
+    markers = ['s', 'v', '.', 's', 'v', '.']
+    thicknesses = [10,20,40,10,20,40]
+    colors = ['#2874a6', '#3498db', '#85c1e9', '#af601a', '#e67e22', '#f0b27a']
+
+    for m, plots in enumerate(all_plots):
+        
+        for k, plot in enumerate(plots):
+
+            try:
+                f = open(plot, 'r')
+            except:
+                print('No file for V = ', -all_ts[m][k])
+            else:
+                plat = plot.split('/')[-1]
+                temps = plat.split('_')
+                temp = temps[2]
+
+                lines = f.readlines()
+                lines = lines[10:]
+
+                vals = []
+
+                for i in range(len(lines)):
+                    vec1 = lines[i].split('\t')
+                    all_vals = vec1[1:]
+                    ani_int = 0
+                    if ani == 'OOP':
+                        ani_int = 2
+                    temp = []
+                    while ani_int < len(all_vals):
+                        temp.append(float(all_vals[ani_int]))
+                        ani_int += 3
+                    vals.append(temp)
+
+                ys = []
+
+                for i in range(len(vals[0])):
+                    val = 0
+                    for j in range(len(vals)):
+                        val += float(vals[j][i])
+                    val /= len(vals)
+                    ys.append(val)
+
+
+                # When <mxdmdt> flattens out we get NaN and inf after doing the logarithm. 
+                # This needs to be removed
+                # From looking at the data, it seems to be fine to just find the 
+                # slope from the first half of ys, as the end point introduces lots of noise
+                try: 
+                    min_y = min(ys)
+                except ValueError:
+                    print('min(ys) is empty for V = ', all_ts[m][k])
+                else:
+                    # ys =[y + abs(min_y) for y in ys]
+                    ys = np.array([np.log(p) for p in ys])
+                    ys = ys[np.isfinite(ys)]
+                    xs = np.linspace(0, 2, len(ys))
+                        
+                    # Find the cut-off before fitting the function
+                    algo = rpt.Dynp(model="l2").fit(ys)
+                    try:
+                        result = algo.predict(n_bkps=1)
+                    except:
+                        print('Too noisy systesm for V = ', all_ts[m][k])
+                    else:
+                    
+                        # If the signal travels almost to the edges the cut-off is not needed
+                        # If the cut-off is larger than 1/2 of the distance, this is the case
+                        if result[0] > len(ys*0.5):
+                        
+                            # Then cut off the list and create x-values list
+                            ys = ys[:result[0]]
+                            xs = xs[:result[0]]
+                        
+                        # In this case we just remove the very edges
+                        else:
+                            ys = ys[:int(3*len(ys)/4)]
+                            xs = xs[:int(3*len(xs)/4)]
+
+                        def f(x, a, b):
+                            return a - b*x   
+
+                        try:
+                            params, params_cov = curve_fit(f, xs, ys)
+                            if 1/params[1] < 0.6 and 1/params[1] > 0:
+                                plt.plot(10e3*all_ts[m][k]/thicknesses[m], 1/params[1], marker=markers[m], markersize = 10, color=colors[m])
+                        except TypeError:
+                            print('Could not find a curve for this voltage: ', all_ts[m][k])
+                        except ValueError:
+                            print('ydata was empty for this voltage: ', all_ts[m][k])
+                        
+                        
+    plt.xlabel(r'Voltage/thickness (μV/nm)')
+    plt.ylabel(r'$l_d$')
+    
+    handles = []
+    
+    aniuni_2_layer = mlines.Line2D([], [], color=colors[0], marker=markers[0], linestyle='None',
+                          markersize=10, label='Uniaxial system')
+    
+    labels = ['2 layer', '4 layer', '8 layer', '2 layer', '4 layer', '8 layer']
+    
+    for n in range(len(all_plots)):
+        handles.append(mlines.Line2D([], [], color=colors[n], marker=markers[n], linestyle='None',
+                          markersize=10, label=labels[n]))
+    
+    
+    plt.legend(handles=handles)
+    
+    plt.tight_layout()
+    plt.savefig(savename, dpi=500)
+    
+
+    plt.show()
+    
+def plot_diffusion_length_both_systems(plots1, plots2, ts, savename, ani, thickness):
+    
+    '''
+    
+    Plots the spin diffusion lengths of given magnon transport simulations (two systems in the same plot). 
+    ts are the values that is compared between them
+    
+    '''
+    
+    
+    plt.figure(figsize=(10,7))
+    
+    both = [plots1, plots2]
+    markers = ['s', 'v']
+    colors = ['tab:blue', 'tab:orange']
+
+    for m, plots in enumerate(both):
+        
+        for k, plot in enumerate(plots):
+
+            try:
+                f = open(plot, 'r')
+            except:
+                print('No file for V = ', -ts[k])
+            else:
+                plat = plot.split('/')[-1]
+                temps = plat.split('_')
+                temp = temps[2]
+
+                lines = f.readlines()
+                lines = lines[10:]
+
+                vals = []
+
+                for i in range(len(lines)):
+                    vec1 = lines[i].split('\t')
+                    all_vals = vec1[1:]
+                    ani_int = 0
+                    if ani == 'OOP':
+                        ani_int = 2
+                    temp = []
+                    while ani_int < len(all_vals):
+                        temp.append(float(all_vals[ani_int]))
+                        ani_int += 3
+                    vals.append(temp)
+
+                ys = []
+
+                for i in range(len(vals[0])):
+                    val = 0
+                    for j in range(len(vals)):
+                        val += float(vals[j][i])
+                    val /= len(vals)
+                    ys.append(val)
+
+
+                # When <mxdmdt> flattens out we get NaN and inf after doing the logarithm. 
+                # This needs to be removed
+                # From looking at the data, it seems to be fine to just find the 
+                # slope from the first half of ys, as the end point introduces lots of noise
+                try: 
+                    min_y = min(ys)
+                except ValueError:
+                    print('min(ys) is empty for V = ', -ts[k])
+                else:
+                    # ys =[y + abs(min_y) for y in ys]
+                    ys = np.array([np.log(p) for p in ys])
+                    ys = ys[np.isfinite(ys)]
+                    xs = np.linspace(0, 2, len(ys))
+                        
+                    # Find the cut-off before fitting the function
+                    algo = rpt.Dynp(model="l2").fit(ys)
+                    try:
+                        result = algo.predict(n_bkps=1)
+                    except:
+                        print('Data was too noisy for V = ', -ts[k])
+                    else:
+                        # If the signal travels almost to the edges the cut-off is not needed
+                        # If the cut-off is larger than 1/2 of the distance, this is the case
+                        if result[0] > len(ys*0.5):
+                        
+                            # Then cut off the list and create x-values list
+                            ys = ys[:result[0]]
+                            xs = xs[:result[0]]
+                        
+                        # In this case we just remove the very edges
+                        else:
+                            ys = ys[:int(3*len(ys)/4)]
+                            xs = xs[:int(3*len(xs)/4)]
+
+                        def f(x, a, b):
+                            return a - b*x   
+
+                        try:
+                            params, params_cov = curve_fit(f, xs, ys)
+                            if 1/params[1] < 0.6 and 1/params[1] > 0:
+                                plt.plot(10e3*ts[k]/thickness, 1/params[1], marker=markers[m], markersize = 10, color=colors[m])
+                        except TypeError:
+                            print('Could not find a curve for this voltage: ', ts[k])
+                        except ValueError:
+                            print('ydata was empty for this voltage: ', ts[k])
+                        
+                        
+    plt.xlabel(r'Voltage/thickness (μV/nm)')
+    plt.ylabel(r'$l_d$')
+    
+    
+    green_square = mlines.Line2D([], [], color=colors[0], marker=markers[0], linestyle='None',
+                          markersize=10, label='Uniaxial system')
+    orange_triangle = mlines.Line2D([], [], color=colors[1], marker=markers[1], linestyle='None',
+                          markersize=10, label='Easy-plane system')
+    
+    plt.legend(handles=[green_square, orange_triangle])
+    
+    plt.tight_layout()
+    plt.savefig(savename, dpi=500)
+    
+
     plt.show()
 
 def plot_diffusion_length(plots, ts, savename, ani, thickness):
     
     '''
     
-    Plots the spin diffusion lengths of given magnon transport simulations. ts are the values that is compared between them
+    Plots the spin diffusion lengths of given magnon transport simulations. 
+    ts are different voltages
+    
+    '''
+
+    plt.figure(figsize=(10,7))
+
+    for k, plot in enumerate(plots):
+
+        try:
+            f = open(plot, 'r')
+        except:
+            print('No file for V = ', -ts[k])
+        else:
+            plat = plot.split('/')[-1]
+            temps = plat.split('_')
+            temp = temps[2]
+
+            lines = f.readlines()
+            lines = lines[10:]
+
+            vals = []
+
+            for i in range(len(lines)):
+                vec1 = lines[i].split('\t')
+                all_vals = vec1[1:]
+                ani_int = 0
+                if ani == 'OOP':
+                    ani_int = 2
+                temp = []
+                while ani_int < len(all_vals):
+                    temp.append(float(all_vals[ani_int]))
+                    ani_int += 3
+                vals.append(temp)
+
+            ys = []
+
+            for i in range(len(vals[0])):
+                val = 0
+                for j in range(len(vals)):
+                    val += float(vals[j][i])
+                val /= len(vals)
+                ys.append(val)
+
+
+            # When <mxdmdt> flattens out we get NaN and inf after doing the logarithm. 
+            # This needs to be removed
+            # From looking at the data, it seems to be fine to just find the 
+            # slope from the first half of ys, as the end point introduces lots of noise
+            try: 
+                min_y = min(ys)
+            except ValueError:
+                print('min(ys) is empty for V = ', ts[k])
+            else:
+                # ys =[y + abs(min_y) for y in ys]
+                ys = np.array([np.log(p) for p in ys])
+                ys = ys[np.isfinite(ys)]
+                xs = np.linspace(0, 2, len(ys))
+                    
+                # Find the cut-off before fitting the function
+                algo = rpt.Dynp(model="l2").fit(ys)
+                result = algo.predict(n_bkps=1)
+                
+                # If the signal travels almost to the edges the cut-off is not needed
+                # If the cut-off is larger than 1/2 of the distance, this is the case
+                print(result[0])
+                if result[0] > len(ys*0.5):
+                
+                    # Then cut off the list and create x-values list
+                    ys = ys[:result[0]]
+                    xs = xs[:result[0]]
+                
+                # In this case we just remove the very edges
+                else:
+                    ys = ys[:int(3*len(ys)/4)]
+                    xs = xs[:int(3*len(xs)/4)]
+
+                def f(x, a, b):
+                    return a - b*x   
+
+                try:
+                    params, params_cov = curve_fit(f, xs, ys)
+                    if 1/params[1] < 0.6 and 1/params[1] > 0:
+                        plt.plot(10e3*ts[k]/thickness, 1/params[1], marker='v', markersize = 10, color='black')
+                except TypeError:
+                    print('Could not find a curve for this voltage: ', ts[k])
+                except ValueError:
+                    print('ydata was empty for this voltage: ', ts[k])
+
+        
+    plt.xlabel(r'Voltage/thickness (μV/nm)')
+    plt.ylabel(r'$l_d$')
+    # plt.yticks([0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50])
+
+    plt.tight_layout()
+    plt.savefig(savename, dpi=500)
+
+    plt.show()
+
+def plot_diffusion_length_across_thicknesses(plots, ts, savename, ani):
+    
+    '''
+    
+    Plots the spin diffusion lengths of given magnon transport simulations. 
+    ts are the different thicknesses
+    
+    '''
+
+    plt.figure(figsize=(10,7))
+
+    for k, plot in enumerate(plots):
+
+        print(plot)
+
+        try:
+            f = open(plot, 'r')
+        except:
+            print('No file for V = ', -ts[k])
+        else:
+            plat = plot.split('/')[-1]
+            temps = plat.split('_')
+            temp = temps[2]
+
+            lines = f.readlines()
+            lines = lines[10:]
+
+            vals = []
+
+            for i in range(len(lines)):
+                vec1 = lines[i].split('\t')
+                all_vals = vec1[1:]
+                ani_int = 0
+                if ani == 'OOP':
+                    ani_int = 2
+                temp = []
+                while ani_int < len(all_vals):
+                    temp.append(float(all_vals[ani_int]))
+                    ani_int += 3
+                vals.append(temp)
+
+            ys = []
+
+            for i in range(len(vals[0])):
+                val = 0
+                for j in range(len(vals)):
+                    val += float(vals[j][i])
+                val /= len(vals)
+                ys.append(val)
+
+
+            # When <mxdmdt> flattens out we get NaN and inf after doing the logarithm. 
+            # This needs to be removed
+            # From looking at the data, it seems to be fine to just find the 
+            # slope from the first half of ys, as the end point introduces lots of noise
+            try: 
+                min_y = min(ys)
+            except ValueError:
+                print('min(ys) is empty for V = ', ts[k])
+            else:
+                ys = np.array([np.log(p) for p in ys])
+                ys = ys[np.isfinite(ys)]
+                xs = np.linspace(0, 2, len(ys))
+                    
+                # Find the cut-off before fitting the function
+                algo = rpt.Dynp(model="l2").fit(ys)
+                result = algo.predict(n_bkps=1)
+                
+                # If the signal travels almost to the edges the cut-off is not needed
+                # If the cut-off is larger than 1/2 of the distance, this is the case
+                print(result[0])
+                if result[0] > 90:
+                
+                    # Then cut off the list and create x-values list
+                    ys = ys[:result[0]]
+                    xs = xs[:result[0]]
+                
+                # In this case we just remove the very edges
+                else:
+                    ys = ys[:int(3*len(ys)/4)]
+                    xs = xs[:int(3*len(xs)/4)]
+
+                def f(x, a, b):
+                    return a - b*x   
+
+                try:
+                    params, params_cov = curve_fit(f, xs, ys)
+                    plt.plot(ts[k]/5, 1/params[1], marker='v', markersize = 10, color='black')
+                except TypeError:
+                    print('Could not find a curve for this voltage: ', ts[k])
+                except ValueError:
+                    print('ydata was empty for this voltage: ', ts[k])
+
+        
+    plt.xlabel(r'Thickness (layers)')
+    plt.ylabel(r'$l_d$')
+    # plt.yticks([0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50])
+    plt.xticks([1,2,3,4,5,6,7,8])
+
+    plt.tight_layout()
+    plt.savefig(savename, dpi=500)
+
+    plt.show()
+
+def plot_cut_offs(plots, ts, ani):
+    
+    '''
+    
+    Plots the spin diffusion along their cut-off distances. This is used
+    to check if the cut of distances are correct, as they are used for 
+    the linear regression to find spin diffusion lengths.
     
     '''
 
@@ -1590,45 +2042,112 @@ def plot_diffusion_length(plots, ts, savename, ani, thickness):
                 val /= len(vals)
                 ys.append(val)
 
-
-            # ys = [(((y )/abs(ys[0]))) for y in ys]
-            # min_y = min(ys)
-            # ys =[y + abs(min_y) for y in ys]
             
-
+            # If the signal is small enough, it could be negative. It needs to all be positive 
+            # for us to find a logarithm
             # When <mxdmdt> flattens out we get NaN and inf after doing the logarithm. 
             # This needs to be removed
-            # From looking at the data, it seems to be fine to just find the 
-            # slope from the first half of ys, as the end point introduces lots of noise
+            try:
+                min_y = min(ys)
+            except ValueError:
+                print('min(ys) is empty for V = ', ts[k])
+            else:
+                ys1 = np.array([np.log(p) for p in ys])
+                ys1 = ys1[np.isfinite(ys1)]
+                
+                # Apply to log-transformed data
+                algo = rpt.Dynp(model="l2").fit(ys1)
+                result = algo.predict(n_bkps=1)
+                
+                xs = np.linspace(0, 2, len(ys))
+
+                plt.plot(xs, ys, color=colors[k])
+
+                plt.axvline(x = xs[result[0]], color = 'b')
+
+                plt.xlabel(r'x')
+                plt.ylabel(r'$\mu$')
+
+                plt.tight_layout()
+
+                plt.show()
+        
+def plot_logarithms(plots, ts, savename, ani):
+    
+    '''
+    
+    Plots the logarithms of given magnon transport simulations. 
+    Used to check whether data can be used in plot_diffusion_lengths()
+    
+    '''
+
+    plt.figure(figsize=(10,7))
+
+
+    N = len(ts)
+    colors = plt.cm.viridis(np.linspace(0,1,N+1))
+    # colors = ['tab:blue', 'tab:red']
+
+
+    for k, plot in enumerate(plots):
+
+        try:
+            f = open(plot, 'r')
+        except:
+            print('No file for V = ', -ts[k])
+        else:
+            plat = plot.split('/')[-1]
+            temps = plat.split('_')
+            temp = temps[2]
+
+            lines = f.readlines()
+            lines = lines[10:]
+
+            vals = []
+
+            for i in range(len(lines)):
+                vec1 = lines[i].split('\t')
+                all_vals = vec1[1:]
+                ani_int = 0
+                if ani == 'OOP':
+                    ani_int = 2
+                temp = []
+                while ani_int < len(all_vals):
+                    temp.append(float(all_vals[ani_int]))
+                    ani_int += 3
+                vals.append(temp)
+
+            ys = []
+
+            for i in range(len(vals[0])):
+                val = 0
+                for j in range(len(vals)):
+                    val += float(vals[j][i])
+                val /= len(vals)
+                ys.append(val)
+
+            
+            # If the signal is small enough, it could be negative. It needs to all be positive 
+            # for us to find a logarithm
+            # When <mxdmdt> flattens out we get NaN and inf after doing the logarithm. 
+            # This needs to be removed
+            min_y = min(ys)
+            ys = [y + abs(min_y) for y in ys]
             ys = np.array([np.log(p) for p in ys])
-            ys = ys[np.isfinite(ys)]
-            ys = ys[:int(len(ys)/2)]
+            # ys1 = ys1[np.isfinite(ys1)]
+            
             xs = np.linspace(0, 2, len(ys))
 
-            def f(x, a, b):
-                return a - b*x   
-
-            try:
-                params, params_cov = curve_fit(f, xs, ys)
-                plt.plot(10e3*ts[k]/thickness, 1/params[1], marker='v', markersize = 10, color='black')
-            except TypeError:
-                print('Could not find a curve for this voltage: ', ts[k])
-            except ValueError:
-                print('ydata was empty for this voltage: ', ts[k])
-
-        # plt.plot(ts[k], params[1], marker='v', markersize = 10, color='black')
-        # plt.plot(f(xs, params[0], params[1]), xs, color=colors[k])
-        # plt.plot(xs, ys, color=colors[k])
-
+        plt.plot(xs, ys, color=colors[k])
         
 
-    plt.xlabel(r'Voltage/thickness (V/nm)')
-    plt.ylabel(r'$L_d$')
+        plt.xlabel(r'x')
+        plt.ylabel(r'$\mu$')
 
-    plt.tight_layout()
-    plt.savefig(savename, dpi=600)
+        plt.tight_layout()
+        plt.savefig(savename, dpi=500)
 
-    plt.show()
+        plt.show()
 
 def plot_current_density(meshdims, cellsize, t, V, damping, MEC, ani, T, type):
 
@@ -1903,23 +2422,23 @@ def main():
 
     #### MAGNON TRANSPORT ### 
 
-    Jc_dict = {5 : '-0.06', 10: '-0.12', 15 : '-0.18', 20 : '-0.25', 25 : '-0.32',
-                 30 : '-0.38', 35 : '-0.45', 40 : '-0.52', 45 : '-0.58'}
+    # Jc_dict = {5 : '-0.06', 10: '-0.12', 15 : '-0.18', 20 : '-0.25', 25 : '-0.32',
+    #              30 : '-0.38', 35 : '-0.45', 40 : '-0.52', 45 : '-0.58'}
     
 
-    this = 45
+    # this = 45
 
-    f1 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x' + str(this) + '/tAvg_damping0.0004_V' + Jc_dict[this] + '_0.3K.txt'
-    f2 = 'AFM/ex+ani+hard_axis+Hfield/IP/cache/t_avg/4000x50x' + str(this) + '/tAvg_damping0.0004_V' + Jc_dict[this] + '_0.3K.txt'
+    # f1 = 'AFM/ex+ani/IP/cache/t_avg/4000x50x' + str(this) + '/tAvg_damping0.0004_V' + Jc_dict[this] + '_0.3K.txt'
+    # f2 = 'AFM/ex+ani+hard_axis+Hfield/IP/cache/t_avg/4000x50x' + str(this) + '/tAvg_damping0.0004_V' + Jc_dict[this] + '_0.3K.txt'
     # f3 = 'AFM/ex+ani/IP/cache/t_avg/3000x50x100/tAvg_damping0.0004_V-4.5_10K.txt'
     # f4 = 'AFM/ex+ani/IP/cache/t_avg/3000x50x100/tAvg_damping0.0004_V-4.5_20K.txt'
 
-    l1 = 'Easy-axis'
-    l2 = 'Easy-plane'
+    # l1 = 'Easy-axis'
+    # l2 = 'Easy-plane'
     # # l3 = '10'
     # l4 = '20'
 
-    savename = 'AFM/ex+ani+hard_axis+Hfield/IP/plots/custom/easy_vs_hard_comparison_' + str(this/5) + 'layer.png'
+    # savename = 'AFM/ex+ani+hard_axis+Hfield/IP/plots/custom/easy_vs_hard_comparison_' + str(this/5) + 'layer.png'
 
     # plot_tAvg_comparison([f1,f2], [l1,l2], savename, 'IP')
 
@@ -1938,26 +2457,131 @@ def main():
     # plot_dispersions((f1,f2,f3), savename)
 
     ### DIFFUSION LENGTHS ###
-
-    thickness = 5
-    easy_plane = 0
-
+    
+    ### Constant Jc over d ###
+    
+    Vs = []
+    thicknesses = []
+    V0 = 0.06
     fs = []
-    ts = []
-    factor = thickness/20
-    easy_plane_string = ''
-    if easy_plane:
-        easy_plane_string = '+hard_axis+Hfield'
-    for i in range(27):
-        voltage = (i+1)*0.025
-        ts.append(voltage*factor)
-        plotname = 'AFM/ex+ani' + easy_plane_string + f'/IP/cache/t_avg/4000x50x{thickness}/tAvg_damping0.0004_V-{voltage*factor:.3f}_0.3K.txt'
-        fs.append(plotname)
+    for i in range(1, 9):
+        Vs.append(V0*i)
+        thicknesses.append(5*i)
+    
+    thicknesses += thicknesses
+        
+    for k in range(2):
+        if k == 0:
+            easy_plane_string = ''
+        else:
+            easy_plane_string = '+hard_axis+Hfield'
 
-    savename = 'AFM/ex+ani' + easy_plane_string + f'/IP/plots/custom/voltage_dependence_diffusion_lengths_{int(thickness/5)}layer.png'
+        for V, thickness in zip(Vs, thicknesses):
+            plotname = 'AFM/ex+ani' + easy_plane_string + f'/IP/cache/t_avg/4000x50x{thickness}/tAvg_damping0.0004_V-{round(V,3):.3f}_0.3K.txt'
+            fs.append(plotname)
+            
+    
+    savename_thickness = f'AFM/custom/plots/diffusion_length_across_thicknesses_V0={V0:.3f}.png'
+    
+    plot_diffusion_length_across_thicknesses(fs, thicknesses, savename_thickness, 'IP')
+    # plot_cut_offs(fs, thicknesses, 'IP')
+    
+    ### Across voltages ###
+    
+    # thickness = 20
+    # easy_plane = 0
 
-    plot_diffusion_length(fs, ts, savename, 'IP', thickness)
+    # fs = []
+    # ts = []
+    # factor = thickness/20
+    # easy_plane_string = ''
+    # if easy_plane:
+    #     easy_plane_string = '+hard_axis+Hfield'
+    # for i in range(8, 55):
+    #     voltage = (i+1)*0.025
+    #     ts.append(round(voltage*factor,3))
+    #     plotname = 'AFM/ex+ani' + easy_plane_string + f'/IP/cache/t_avg/4000x50x{thickness}/tAvg_damping0.0004_V-{round(voltage*factor,3):.3f}_0.3K.txt'
+    #     fs.append(plotname)
 
+    # savename = 'AFM/ex+ani' + easy_plane_string + f'/IP/plots/custom/voltage_dependence_diffusion_lengths_{int(thickness/5)}layer.png'
+    # log_savename = 'AFM/ex+ani' + easy_plane_string + f'/IP/plots/custom/logarithms_{int(thickness/5)}layer.png'
+
+
+    # plot_diffusion_length(fs, ts, savename, 'IP', thickness)
+    # plot_logarithms(fs, ts, log_savename, 'IP', thickness)
+    # plot_cut_offs(fs, ts, 'IP')
+    
+    
+    ## Both systems across voltages ###
+    
+    # thickness = 10
+    # easy_plane = 0
+    
+    # fs1 = []
+    # ts = []
+    # factor = thickness/20
+    # easy_plane_string = ''
+    # if easy_plane:
+    #     easy_plane_string = '+hard_axis+Hfield'
+    # for i in range(4,55):
+    #     voltage = (i+1)*0.025
+    #     ts.append(round(voltage*factor,3))
+    #     plotname = 'AFM/ex+ani' + easy_plane_string + f'/IP/cache/t_avg/4000x50x{thickness}/tAvg_damping0.0004_V-{round(voltage*factor,3):.3f}_0.3K.txt'
+    #     fs1.append(plotname)
+        
+    # easy_plane = 1
+    
+    # fs2 = []
+    # factor = thickness/20
+    # easy_plane_string = ''
+    # if easy_plane:
+    #     easy_plane_string = '+hard_axis+Hfield'
+    # for i in range(4,55):
+    #     voltage = (i+1)*0.025
+    #     plotname = 'AFM/ex+ani' + easy_plane_string + f'/IP/cache/t_avg/4000x50x{thickness}/tAvg_damping0.0004_V-{round(voltage*factor,3):.3f}_0.3K.txt'
+    #     fs2.append(plotname)
+        
+    # savename_both = f'AFM/custom/plots/voltage_dependence_diffusion_lengths_{int(thickness/5)}layer.png'
+    
+    # plot_diffusion_length_both_systems(fs1, fs2, ts, savename_both, 'IP', thickness)
+    
+    ### All systems across voltages ###
+    
+    # all_fs = []
+    # all_ts = []
+    # for thickness in [10,20,40]:
+        
+    #     fs1 = []
+    #     ts = []
+    #     factor = thickness/20
+    #     easy_plane_string = ''
+    #     for i in range(4,55):
+    #         voltage = (i+1)*0.025
+    #         ts.append(round(voltage*factor,3))
+    #         plotname = 'AFM/ex+ani' + easy_plane_string + f'/IP/cache/t_avg/4000x50x{thickness}/tAvg_damping0.0004_V-{round(voltage*factor,3):.3f}_0.3K.txt'
+    #         fs1.append(plotname)
+            
+    #     all_fs.append(fs1)
+    #     all_ts.append(ts)
+        
+    # for thickness in [10,20,40]:
+
+    #     fs2 = []
+    #     factor = thickness/20
+    #     easy_plane_string = '+hard_axis+Hfield'
+    #     for i in range(4,55):
+    #         voltage = (i+1)*0.025
+    #         ts.append(round(voltage*factor,3))
+    #         plotname = 'AFM/ex+ani' + easy_plane_string + f'/IP/cache/t_avg/4000x50x{thickness}/tAvg_damping0.0004_V-{round(voltage*factor,3):.3f}_0.3K.txt'
+    #         fs2.append(plotname)
+            
+    #     all_fs.append(fs2)
+    #     all_ts.append(ts)
+        
+        
+    # savename_all = f'AFM/custom/plots/voltage_dependence_diffusion_lengths_all_layers.png'
+    
+    # plot_diffusion_length_all_systems(all_fs, all_ts, savename_all, 'IP')
 
 if __name__ == '__main__':
     main()
