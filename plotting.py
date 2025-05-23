@@ -7,6 +7,7 @@ import ruptures as rpt
 from scipy.optimize import curve_fit
 from scipy.fft import fft, fftfreq
 from scipy.signal import find_peaks
+import copy
 
 plt.rcParams.update({'font.size': 26})
 
@@ -150,8 +151,6 @@ def plot_tAvg_SA(timeAvgSA):
         lines = f.readlines()
         lines = lines[10:]
 
-        xs = np.linspace(timeAvgSA.x_start/1000, timeAvgSA.x_stop/1000, int((timeAvgSA.x_stop - timeAvgSA.x_start)/timeAvgSA.cellsize))
-
         vals = []
 
 
@@ -177,6 +176,8 @@ def plot_tAvg_SA(timeAvgSA):
                 val += float(vals[j][i])
             val /= len(vals)
             ys.append(val)
+            
+        xs = np.linspace(timeAvgSA.x_start/1000, timeAvgSA.x_stop/1000, len(ys))
             
         plt.plot(xs, ys, linewidth=2)
         plt.xlabel(r'$x$ $(\mu m)$')
@@ -927,7 +928,7 @@ def plot_magnon_dispersion_with_zoom(magnonDispersion, clim_max = 1000):
 
             x1, x2, y1, y2 = -0.15, 0.15, 0, 0.3
             axins = ax1[i].inset_axes(
-                [0.5, 0.4, 0.47, 0.47],
+                [0.5, 0.5, 0.47, 0.47],
                 xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
             axins.imshow(final_result, extent = [-k_max, k_max,f_min, f_max], origin='lower')
 
@@ -940,16 +941,19 @@ def plot_magnon_dispersion_with_zoom(magnonDispersion, clim_max = 1000):
             ax1.set_xlabel(label)
             ax1.set_ylabel(ylabel)
 
-            x1, x2, y1, y2 = -0.25, 0.25, 0, 0.5
+            x1, x2, y1, y2 = -0.3, 0.3, 0, 0.4
             axins = ax1.inset_axes(
-                [0.5, 0.5, 0.47, 0.47],
+                [0.4, 0.52, 0.6, 0.4],
                 xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
             axins.imshow(final_result, extent = [-k_max, k_max,f_min, f_max], origin='lower', clim=(0,5000))
             axins.set_yticks([0.0, 0.2, 0.4])
 
-            ax1.indicate_inset_zoom(axins, edgecolor='black')
+            ax1.indicate_inset_zoom(axins, edgecolor='white', alpha=1)
         
-
+            for spine in axins.spines.values():
+                spine.set_edgecolor('white')
+                
+            axins.tick_params(colors='white')
         # ax1.set_ylim(0, 0.1)
 
         plt.tight_layout()
@@ -1178,7 +1182,7 @@ def plot_magnon_dispersion_triple_with_zoom(magnonDispersion, clim_max = 1000):
         title = r'y = ' + str(yvals[index]*1e-3) + ' $\mu$m'
         ax[index].title.set_text(title)
 
-        x1, x2, y1, y2 = -0.25, 0.25, 0, 0.5
+        x1, x2, y1, y2 = -0.75, 0.75, 0, 1.5
         axins = ax[index].inset_axes(
             [0.5, 0.4, 0.47, 0.47],
             xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
@@ -1265,6 +1269,79 @@ def plot_magnon_dispersion_separate(magnonDispersion, clim_max = 1000):
     plt.savefig(savename, dpi=500)
 
     plt.show()
+
+def plot_dispersion_field_comparisons(plots, c_max1, c_max2):
+
+    '''
+    
+    Plots several magnon dispersion relations in the same figure (subplots). 
+    This is a specific function for comparison of external magnetic field in the biaxial system. 
+    
+    '''
+
+    fig, axs = plt.subplots(4, 1)
+
+    fig.set_figheight(20)
+    fig.set_figwidth(7)
+
+    annotations = [r'$\mu_0$H = 0.0T', r'$\mu_0$H = 3.0T', r'$\mu_0$H = 5.9T', r'$\mu_0$H = 11.8T']
+    annotations2 = [r'$(a)$', r'$(b)$', r'$(c)$', r'$(d)$']
+
+    indexer = 0
+
+    for i in range(8):
+        output_file = plots[i]
+
+        time_step = 0.1e-12
+        pos_time = np.loadtxt(output_file)
+
+        fourier_data = np.fft.fftshift(np.abs(np.fft.fft2(pos_time)))
+
+        freq_len = len(fourier_data)
+        k_len = len(fourier_data[0])
+        freq = np.fft.fftfreq(freq_len, time_step)
+        kvector = np.fft.fftfreq(k_len, 5e-9)
+
+        k_max = 2*np.pi*kvector[int(0.5 * len(kvector))]*5e-9
+        f_min = np.abs(freq[0])
+        f_max = np.abs(freq[int(0.5 * len(freq))])/1e12 # to make it THz
+        f_points = int(0.5 * freq_len)
+        
+        if i % 2 == 0:
+            result = np.array([fourier_data[i] for i in range(int(0.5 *freq_len),freq_len)])
+        else:
+            result += np.array([fourier_data[i] for i in range(int(0.5 *freq_len),freq_len)])
+        
+            label = 'qy'
+
+            x1, x2, y1, y2 = -0.3, 0.3, 0, 0.4
+            axins = axs[indexer].inset_axes(
+                [0.4, 0.52, 0.6, 0.4],
+                xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
+
+            axs[indexer].imshow(result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0,c_max1[indexer]))
+            axins.imshow(result, extent = [-k_max, k_max,f_min, f_max], origin='lower', clim=(0,c_max2[indexer]))
+            axs[indexer].indicate_inset_zoom(axins, edgecolor='white', alpha=1)
+            axs[indexer].annotate(annotations[indexer], xy=(0.025,0.05  ), xycoords=('axes fraction'), color='white')
+            axs[indexer].annotate(annotations2[indexer], xy=(0.9,0.05), xycoords=('axes fraction'), color='white')
+
+            for spine in axins.spines.values():
+                spine.set_edgecolor('white')
+                
+            axins.tick_params(colors='white')
+
+            axs[indexer].set_xlabel(label)
+            axs[indexer].set_ylabel('f (THz)')
+            
+            indexer += 1
+
+    fig.tight_layout()
+    
+    savename = 'AFM/custom/plots/dispersions_magnetic_field_comparison.png'
+
+    plt.savefig(savename, dpi=500)
+
+    # plt.show()
 
 def plot_phonon_dispersion(meshdims, damping, MEC, ani, dir,time_step):
 
@@ -1441,7 +1518,6 @@ def plot_dispersions(plots, savename):
 
 
     plt.show()
-
 
 #### MISCELLANEOUS ####
 
@@ -1725,10 +1801,16 @@ def plot_diffusion_length_both_systems(plots1, plots2, ts, savename, ani, thickn
                 except ValueError:
                     print('min(ys) is empty for V = ', -ts[k])
                 else:
-                    # ys =[y + abs(min_y) for y in ys]
+                    
+                    # This is the data set we use for curve fitting
+                    ys1 = [y + abs(min_y) for y in ys]
+                    ys1 = np.array([np.log(p) for p in ys1])
+                    
+                    # This is the data set we use for determining the cut-off
                     ys = np.array([np.log(p) for p in ys])
-                    ys = ys[np.isfinite(ys)]
-                    xs = np.linspace(0, 2, len(ys))
+                    ys  = ys[np.isfinite(ys)]
+                    
+                    xs = np.linspace(0, 2.98, len(ys1))
                         
                     # Find the cut-off before fitting the function
                     algo = rpt.Dynp(model="l2").fit(ys)
@@ -1737,25 +1819,23 @@ def plot_diffusion_length_both_systems(plots1, plots2, ts, savename, ani, thickn
                     except:
                         print('Data was too noisy for V = ', -ts[k])
                     else:
-                        # If the signal travels almost to the edges the cut-off is not needed
-                        # If the cut-off is larger than 1/2 of the distance, this is the case
-                        if result[0] > len(ys*0.5):
-                        
-                            # Then cut off the list and create x-values list
-                            ys = ys[:result[0]]
-                            xs = xs[:result[0]]
-                        
-                        # In this case we just remove the very edges
-                        else:
-                            ys = ys[:int(3*len(ys)/4)]
-                            xs = xs[:int(3*len(xs)/4)]
+
+                        # Then cut off the list ands create new x-values list
+                        ys1 = ys1[:result[0]]
+                        xs = xs[:result[0]]
 
                         def f(x, a, b):
                             return a - b*x   
+                        
+                        def g(x, a, b, c, d):
+                            return a*np.exp(-b*x) * np.sin(c*x + d)
 
                         try:
-                            params, params_cov = curve_fit(f, xs, ys)
-                            if 1/params[1] < 0.6 and 1/params[1] > 0:
+                            if thickness == 40:
+                                params, params_cov = curve_fit(g, xs, ys1)
+                                plt.plot(10e3*ts[k]/thickness, 1/params[1] / params[0], marker=markers[m], markersize = 10, color=colors[m])
+                            else:
+                                params, params_cov = curve_fit(f, xs, ys1)
                                 plt.plot(10e3*ts[k]/thickness, 1/params[1], marker=markers[m], markersize = 10, color=colors[m])
                         except TypeError:
                             print('Could not find a curve for this voltage: ', ts[k])
@@ -1770,7 +1850,7 @@ def plot_diffusion_length_both_systems(plots1, plots2, ts, savename, ani, thickn
     green_square = mlines.Line2D([], [], color=colors[0], marker=markers[0], linestyle='None',
                           markersize=10, label='Uniaxial system')
     orange_triangle = mlines.Line2D([], [], color=colors[1], marker=markers[1], linestyle='None',
-                          markersize=10, label='Easy-plane system')
+                          markersize=10, label='Biaxial system')
     
     plt.legend(handles=[green_square, orange_triangle])
     
@@ -1828,46 +1908,38 @@ def plot_diffusion_length(plots, ts, savename, ani, thickness):
                 val /= len(vals)
                 ys.append(val)
 
-
-            # When <mxdmdt> flattens out we get NaN and inf after doing the logarithm. 
-            # This needs to be removed
-            # From looking at the data, it seems to be fine to just find the 
-            # slope from the first half of ys, as the end point introduces lots of noise
             try: 
                 min_y = min(ys)
             except ValueError:
                 print('min(ys) is empty for V = ', ts[k])
             else:
-                # ys =[y + abs(min_y) for y in ys]
+                
+                # This is the data set we use for curve fitting
+                ys1 = [y + abs(min_y) for y in ys]
+                ys1 = np.array([np.log(p) for p in ys1])
+                
+                # This is the data set we use for determining the cut-off
                 ys = np.array([np.log(p) for p in ys])
-                ys = ys[np.isfinite(ys)]
-                xs = np.linspace(0, 2, len(ys))
-                    
-                # Find the cut-off before fitting the function
+                ys  = ys[np.isfinite(ys)]
+                
+                xs = np.linspace(0, 2.98, len(ys1))
+                
+                # Apply to cut-off data
                 algo = rpt.Dynp(model="l2").fit(ys)
                 result = algo.predict(n_bkps=1)
                 
-                # If the signal travels almost to the edges the cut-off is not needed
-                # If the cut-off is larger than 1/2 of the distance, this is the case
-                print(result[0])
-                if result[0] > len(ys*0.5):
+                # Then cut off the list ands create new x-values list
+                ys1 = ys1[:result[0]]
+                xs = xs[:result[0]]
                 
-                    # Then cut off the list and create x-values list
-                    ys = ys[:result[0]]
-                    xs = xs[:result[0]]
-                
-                # In this case we just remove the very edges
-                else:
-                    ys = ys[:int(3*len(ys)/4)]
-                    xs = xs[:int(3*len(xs)/4)]
 
                 def f(x, a, b):
                     return a - b*x   
 
                 try:
-                    params, params_cov = curve_fit(f, xs, ys)
-                    if 1/params[1] < 0.6 and 1/params[1] > 0:
-                        plt.plot(10e3*ts[k]/thickness, 1/params[1], marker='v', markersize = 10, color='black')
+                    params, params_cov = curve_fit(f, xs, ys1)
+                    plt.plot(10e3*ts[k]/thickness, 1/params[1], marker='v', markersize = 10, color='black')
+                    # plt.plot(xs, ys1)
                 except TypeError:
                     print('Could not find a curve for this voltage: ', ts[k])
                 except ValueError:
@@ -2052,14 +2124,15 @@ def plot_cut_offs(plots, ts, ani):
             except ValueError:
                 print('min(ys) is empty for V = ', ts[k])
             else:
+                ys1 = [y + abs(min_y) for y in ys]
                 ys1 = np.array([np.log(p) for p in ys])
-                ys1 = ys1[np.isfinite(ys1)]
+                # ys1 = ys1[np.isfinite(ys1)]
                 
-                # Apply to log-transformed data
+                # Apply to non-transformed data
                 algo = rpt.Dynp(model="l2").fit(ys1)
                 result = algo.predict(n_bkps=1)
                 
-                xs = np.linspace(0, 2, len(ys))
+                xs = np.linspace(0, 2.98, len(ys))
 
                 plt.plot(xs, ys, color=colors[k])
 
@@ -2072,7 +2145,7 @@ def plot_cut_offs(plots, ts, ani):
 
                 plt.show()
         
-def plot_logarithms(plots, ts, savename, ani):
+def plot_logarithms(plots, ts, ani):
     
     '''
     
@@ -2126,28 +2199,146 @@ def plot_logarithms(plots, ts, savename, ani):
                 val /= len(vals)
                 ys.append(val)
 
+            min_y = min(ys)
+            ys1 = [y + abs(min_y) for y in ys]
+            ys1 = np.array([np.log(p) for p in ys1])
+            ys = np.array([np.log(p) for p in ys])
+            ys  = ys[np.isfinite(ys)]
+            xs = np.linspace(0, 2.98, len(ys1))
             
+            # Apply to non-transformed data
+            algo = rpt.Dynp(model="l2").fit(ys)
+            result = algo.predict(n_bkps=1)
+
+            plt.plot(xs, ys1, color=colors[k])
+            
+            plt.axvline(x = xs[result[0]], color = 'b')
+            
+
+            plt.xlabel(r'x')
+            plt.ylabel(r'$\mu$')
+
+            plt.tight_layout()
+            # print(result[0])
+            plt.show()
+
+def plot_data_with_fitted_functions(plots, ts, ani, thickness):
+    
+    '''
+    
+    Plots the actual data along with the fitted function for many plots. Used to validate of the 
+    calculations are correct.
+    
+    '''
+
+    plt.figure(figsize=(10,7))
+
+
+    N = len(ts)
+    colors = plt.cm.viridis(np.linspace(0,1,N+1))
+
+    for k, plot in enumerate(plots):
+
+        try:
+            f = open(plot, 'r')
+        except:
+            print('No file for V = ', -ts[k])
+        else:
+            plat = plot.split('/')[-1]
+            temps = plat.split('_')
+            temp = temps[2]
+
+            lines = f.readlines()
+            lines = lines[10:]
+
+            vals = []
+
+            for i in range(len(lines)):
+                vec1 = lines[i].split('\t')
+                all_vals = vec1[1:]
+                ani_int = 0
+                if ani == 'OOP':
+                    ani_int = 2
+                temp = []
+                while ani_int < len(all_vals):
+                    temp.append(float(all_vals[ani_int]))
+                    ani_int += 3
+                vals.append(temp)
+
+            ys = []
+
+            for i in range(len(vals[0])):
+                val = 0
+                for j in range(len(vals)):
+                    val += float(vals[j][i])
+                val /= len(vals)
+                ys.append(val)
+
+            original_ys = copy.deepcopy(ys)
+            original_xs = np.linspace(0, 2.98, len(original_ys))
             # If the signal is small enough, it could be negative. It needs to all be positive 
             # for us to find a logarithm
             # When <mxdmdt> flattens out we get NaN and inf after doing the logarithm. 
             # This needs to be removed
-            min_y = min(ys)
-            ys = [y + abs(min_y) for y in ys]
-            ys = np.array([np.log(p) for p in ys])
-            # ys1 = ys1[np.isfinite(ys1)]
-            
-            xs = np.linspace(0, 2, len(ys))
+            try:
+                min_y = min(ys)
+            except ValueError:
+                print('min(ys) is empty for V = ', ts[k])
+            else:
+                # This is the data set we use for curve fitting
+                ys1 = [y + abs(min_y) for y in ys]
+                ys1 = np.array([np.log(p) for p in ys1])
+                
+                # This is the data set we use for determining the cut-off
+                ys = np.array([np.log(p) for p in ys])
+                ys  = ys[np.isfinite(ys)]
+                
+                xs = np.linspace(0, 2.98, len(ys1))
+                    
+                # Find the cut-off before fitting the function
+                algo = rpt.Dynp(model="l2").fit(ys)
+                try:
+                    result = algo.predict(n_bkps=1)
+                except:
+                    print('Data was too noisy for V = ', -ts[k])
+                else:
 
-        plt.plot(xs, ys, color=colors[k])
-        
+                    # TFor logarithmic function fitting
+                    ys1 = ys1[:result[0]]
+                    xs1 = xs[:result[0]]
+                    
+                    # For exponential function fitting
+                    ys2 = original_ys[:result[0]]
+                    # ys2 = [y - abs(min_y) for y in ys2]
+                    xs2 = original_xs[:result[0]]
 
-        plt.xlabel(r'x')
-        plt.ylabel(r'$\mu$')
+                    def f(x, a, b):
+                        return a - b*x   
+                    
+                    def g(x, a, b, c, d):
+                        return a*np.exp(-b*x) * np.sin(c*x + d)
 
-        plt.tight_layout()
-        plt.savefig(savename, dpi=500)
-
-        plt.show()
+                    try:
+                        if thickness == 40:
+                            params, params_cov = curve_fit(g, xs2, ys2, p0=[1e12, 2.5, 10, 0])
+                            plt.plot(xs2, ys2, color='tab:blue')
+                            def h(x):
+                                return params[0]*np.exp(-params[1]*x) * np.sin(params[2]*x+params[3])
+                            plt.plot(xs2, h(xs2), color='tab:orange')
+                        else:
+                            params, params_cov = curve_fit(f, xs1, ys1)
+                            plt.plot(xs1, ys1, color='tab:blue')
+                            plt.plot(xs1, f(xs1, params[0], params[1]), color='tab:orange')
+                        
+                        plt.xlabel(r'x')
+                        plt.ylabel(r'$\mu$')
+                        plt.tight_layout()
+                        plt.show()
+                        
+                    except TypeError:
+                        print('Could not find a curve for this voltage: ', ts[k])
+                    # except ValueError:
+                    #     print('ydata was empty for this voltage: ', ts[k])
 
 def plot_current_density(meshdims, cellsize, t, V, damping, MEC, ani, T, type):
 
@@ -2445,105 +2636,130 @@ def main():
 
     ### DISPERSIONS ###
 
-    # f1 = 'AFM/ex+ani+hard_axis/IP/cache/dispersions/4000x50x5/diry_axisxgroundstate_damping0.0004_T0.3_dispersion.txt'
-    # f2 = 'AFM/ex+ani+hard_axis/IP/cache/dispersions/4000x50x5/diry_axisxgroundstate_damping0.0004_T0.8_dispersion.txt'
-    # f3 = 'AFM/ex+ani+hard_axis/IP/cache/dispersions/4000x50x5/diry_axisxgroundstate_damping0.0004_T3_dispersion.txt'
-    # # f4 = 'IP/cache/dispersions/1000x50x150/steady/diry_axisx_dispersion.txt'
-    # # f5 = 'IP/cache/dispersions/1000x50x190/steady/diry_axisx_dispersion.txt'
+    def magnetic_field_comparison():
+        f1 = 'AFM/ex+ani+hard_axis/IP/cache/dispersions/4000x50x5/ycomponent_axisxgroundstate_damping0.0004_T0.3_dispersion.txt'
+        f2 = 'AFM/ex+ani+hard_axis/IP/cache/dispersions/4000x50x5/zcomponent_axisxgroundstate_damping0.0004_T0.3_dispersion.txt'
+        f3 = 'AFM/ex+ani+hard_axis+Hfield/IP/cache/dispersions/4000x50x5/ycomponent_axisxgroundstate_damping0.0004_T0.3_H2355500.0_dispersion.txt'
+        f4 = 'AFM/ex+ani+hard_axis+Hfield/IP/cache/dispersions/4000x50x5/zcomponent_axisxgroundstate_damping0.0004_T0.3_H2355500.0_dispersion.txt'
+        f5 = 'AFM/ex+ani+hard_axis+Hfield/IP/cache/dispersions/4000x50x5/ycomponent_axisxgroundstate_damping0.0004_T0.3_H4711000.0_dispersion.txt'
+        f6 = 'AFM/ex+ani+hard_axis+Hfield/IP/cache/dispersions/4000x50x5/zcomponent_axisxgroundstate_damping0.0004_T0.3_H4711000.0_dispersion.txt'
+        f7 = 'AFM/ex+ani+hard_axis+Hfield/IP/cache/dispersions/4000x50x5/ycomponent_axisxgroundstate_damping0.0004_T0.3_H7066500.0_dispersion.txt'
+        f8 = 'AFM/ex+ani+hard_axis+Hfield/IP/cache/dispersions/4000x50x5/zcomponent_axisxgroundstate_damping0.0004_T0.3_H7066500.0_dispersion.txt'
 
+        plots = [f1,f2,f3,f4,f5,f6,f7,f8]
+        
+        c_max1 = [3000, 3500, 3500, 3500]
+        c_max2 = [9000, 10000, 8000, 9000]
 
-    # savename = 'AFM/ex+ani+hard_axis/IP/plots/custom/dispersion_temperature_comparison.png'
-
-    # plot_dispersions((f1,f2,f3), savename)
+        plot_dispersion_field_comparisons(plots, c_max1, c_max2)
+        
+    # magnetic_field_comparison()
 
     ### DIFFUSION LENGTHS ###
     
     ### Constant Jc over d ###
     
-    Vs = []
-    thicknesses = []
-    V0 = 0.06
-    fs = []
-    for i in range(1, 9):
-        Vs.append(V0*i)
-        thicknesses.append(5*i)
-    
-    thicknesses += thicknesses
+    def const_Jc_over_d():
+        Vs = []
+        thicknesses = []
+        V0 = 0.06
+        fs = []
+        for i in range(1, 9):
+            Vs.append(V0*i)
+            thicknesses.append(5*i)
         
-    for k in range(2):
-        if k == 0:
-            easy_plane_string = ''
-        else:
-            easy_plane_string = '+hard_axis+Hfield'
-
-        for V, thickness in zip(Vs, thicknesses):
-            plotname = 'AFM/ex+ani' + easy_plane_string + f'/IP/cache/t_avg/4000x50x{thickness}/tAvg_damping0.0004_V-{round(V,3):.3f}_0.3K.txt'
-            fs.append(plotname)
+        thicknesses += thicknesses
             
-    
-    savename_thickness = f'AFM/custom/plots/diffusion_length_across_thicknesses_V0={V0:.3f}.png'
-    
-    plot_diffusion_length_across_thicknesses(fs, thicknesses, savename_thickness, 'IP')
-    # plot_cut_offs(fs, thicknesses, 'IP')
+        for k in range(2):
+            if k == 0:
+                easy_plane_string = ''
+            else:
+                easy_plane_string = '+hard_axis+Hfield'
+
+            for V, thickness in zip(Vs, thicknesses):
+                plotname = 'AFM/ex+ani' + easy_plane_string + f'/IP/cache/t_avg/4000x50x{thickness}/tAvg_damping0.0004_V-{round(V,3):.3f}_0.3K.txt'
+                fs.append(plotname)
+                
+        
+        savename_thickness = f'AFM/custom/plots/diffusion_length_across_thicknesses_V0={V0:.3f}.png'
+        
+        plot_diffusion_length_across_thicknesses(fs, thicknesses, savename_thickness, 'IP')
+        plot_cut_offs(fs, thicknesses, 'IP')
     
     ### Across voltages ###
     
-    # thickness = 20
-    # easy_plane = 0
+    def across_voltages():
+        thickness = 40
+        easy_plane = 0
 
-    # fs = []
-    # ts = []
-    # factor = thickness/20
-    # easy_plane_string = ''
-    # if easy_plane:
-    #     easy_plane_string = '+hard_axis+Hfield'
-    # for i in range(8, 55):
-    #     voltage = (i+1)*0.025
-    #     ts.append(round(voltage*factor,3))
-    #     plotname = 'AFM/ex+ani' + easy_plane_string + f'/IP/cache/t_avg/4000x50x{thickness}/tAvg_damping0.0004_V-{round(voltage*factor,3):.3f}_0.3K.txt'
-    #     fs.append(plotname)
+        fs = []
+        ts = []
+        factor = thickness/20
+        easy_plane_string = ''
+        if easy_plane:
+            easy_plane_string = '+hard_axis+Hfield'
+        for i in range(3,14):
+            voltage = (i+1)*0.025
+            ts.append(round(voltage*factor,3))
+            plotname = 'AFM/ex+ani' + easy_plane_string + f'/IP/cache/t_avg/4000x50x{thickness}/tAvg_damping0.0004_V-{round(voltage*factor,3):.3f}_0.3K.txt'
+            fs.append(plotname)
 
-    # savename = 'AFM/ex+ani' + easy_plane_string + f'/IP/plots/custom/voltage_dependence_diffusion_lengths_{int(thickness/5)}layer.png'
-    # log_savename = 'AFM/ex+ani' + easy_plane_string + f'/IP/plots/custom/logarithms_{int(thickness/5)}layer.png'
+        savename = 'AFM/ex+ani' + easy_plane_string + f'/IP/plots/custom/6micro_voltage_dependence_diffusion_lengths_{int(thickness/5)}layer.png'
 
-
-    # plot_diffusion_length(fs, ts, savename, 'IP', thickness)
-    # plot_logarithms(fs, ts, log_savename, 'IP', thickness)
-    # plot_cut_offs(fs, ts, 'IP')
+        # plot_diffusion_length(fs, ts, savename, 'IP', thickness)
+        # plot_logarithms(fs, ts, 'IP')
+        # plot_cut_offs(fs, ts, 'IP')
+        plot_data_with_fitted_functions(fs, ts, 'IP', thickness)
     
+    across_voltages()
     
     ## Both systems across voltages ###
     
-    # thickness = 10
-    # easy_plane = 0
-    
-    # fs1 = []
-    # ts = []
-    # factor = thickness/20
-    # easy_plane_string = ''
-    # if easy_plane:
-    #     easy_plane_string = '+hard_axis+Hfield'
-    # for i in range(4,55):
-    #     voltage = (i+1)*0.025
-    #     ts.append(round(voltage*factor,3))
-    #     plotname = 'AFM/ex+ani' + easy_plane_string + f'/IP/cache/t_avg/4000x50x{thickness}/tAvg_damping0.0004_V-{round(voltage*factor,3):.3f}_0.3K.txt'
-    #     fs1.append(plotname)
+    def both_systems_across_voltages():
+        thickness = 10
         
-    # easy_plane = 1
-    
-    # fs2 = []
-    # factor = thickness/20
-    # easy_plane_string = ''
-    # if easy_plane:
-    #     easy_plane_string = '+hard_axis+Hfield'
-    # for i in range(4,55):
-    #     voltage = (i+1)*0.025
-    #     plotname = 'AFM/ex+ani' + easy_plane_string + f'/IP/cache/t_avg/4000x50x{thickness}/tAvg_damping0.0004_V-{round(voltage*factor,3):.3f}_0.3K.txt'
-    #     fs2.append(plotname)
         
-    # savename_both = f'AFM/custom/plots/voltage_dependence_diffusion_lengths_{int(thickness/5)}layer.png'
+        start = 1
+        length = 4000
+        if thickness == 10:
+            length = 6000
+            start = 4
+        elif thickness == 20:
+            start = 7
+            length = 6000
+            
+        
+        easy_plane = 0
+        
+        fs1 = []
+        ts = []
+        factor = thickness/20
+        easy_plane_string = ''
+        if easy_plane:
+            easy_plane_string = '+hard_axis+Hfield'
+        for i in range(start,55):
+            voltage = (i+1)*0.025
+            ts.append(round(voltage*factor,3))
+            plotname = 'AFM/ex+ani' + easy_plane_string + f'/IP/cache/t_avg/{length}x50x{thickness}/tAvg_damping0.0004_V-{round(voltage*factor,3):.3f}_0.3K.txt'
+            fs1.append(plotname)
+            
+        easy_plane = 1
+        
+        fs2 = []
+        factor = thickness/20
+        easy_plane_string = ''
+        if easy_plane:
+            easy_plane_string = '+hard_axis+Hfield'
+        for i in range(start,55):
+            voltage = (i+1)*0.025
+            plotname = 'AFM/ex+ani' + easy_plane_string + f'/IP/cache/t_avg/{length}x50x{thickness}/tAvg_damping0.0004_V-{round(voltage*factor,3):.3f}_0.3K.txt'
+            fs2.append(plotname)
+            
+        savename_both = f'AFM/custom/plots/voltage_dependence_diffusion_lengths_{int(thickness/5)}layer.png'
+        
+        plot_diffusion_length_both_systems(fs1, fs2, ts, savename_both, 'IP', thickness)
     
-    # plot_diffusion_length_both_systems(fs1, fs2, ts, savename_both, 'IP', thickness)
+    # both_systems_across_voltages()
     
     ### All systems across voltages ###
     
