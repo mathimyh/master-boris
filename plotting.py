@@ -962,12 +962,12 @@ def plot_magnon_dispersion_with_zoom(magnonDispersion, clim_max = 1000):
 
     plt.show()
 
-def plot_magnon_dispersion(magnonDispersion, clim_max = 1000):
+def plot_magnon_dispersion_separate(magnonDispersion, clim_max = 1000):
 
     '''
     
     Plot the magnon dispersion of a given system. In the case of easy-plane, the y and z components
-    are superimposed on the same plot. 
+    are plotted next to each other. 
 
     '''
 
@@ -980,8 +980,7 @@ def plot_magnon_dispersion(magnonDispersion, clim_max = 1000):
         ylabel = 'f (GHz)'
         divisor = 1e9
 
-
-    if magnonDispersion.steadystate:
+    if magnonDispersion.triple:
         output_files = magnonDispersion.cachename()
         savename = magnonDispersion.plotname()
         
@@ -1027,14 +1026,16 @@ def plot_magnon_dispersion(magnonDispersion, clim_max = 1000):
 
     elif magnonDispersion.hard_axis:
         
+        titles = ['y component', 'z component']
+        
         output_files = magnonDispersion.cachename()
         savename = magnonDispersion.plotname()
         params.make_folder(savename)
         
         fig, ax = plt.subplots(1,2)
 
-        fig.set_figheight(5)
-        fig.set_figwidth(10)
+        fig.set_figheight(6)
+        fig.set_figwidth(12)
         yvals =[5,25,45]
         
         for i, output_filex in enumerate(output_files):
@@ -1061,7 +1062,22 @@ def plot_magnon_dispersion(magnonDispersion, clim_max = 1000):
 
             ax[i].set_xlabel(label)
             ax[i].set_ylabel(ylabel)
-            # ax1.set_ylim(0, 0.1)
+            ax[i].set_title(titles[i])
+
+            x1, x2, y1, y2 = -0.3, 0.3, 0, 0.4
+            axins = ax[i].inset_axes(
+                [0.4, 0.52, 0.6, 0.4],
+                xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
+            axins.imshow(result, extent = [-k_max, k_max,f_min, f_max], origin='lower', clim=(0,15000))
+            axins.set_yticks([0.0, 0.2, 0.4])
+
+            ax[i].indicate_inset_zoom(axins, edgecolor='white', alpha=1)
+        
+            for spine in axins.spines.values():
+                spine.set_edgecolor('white')
+                
+            axins.tick_params(colors='white')
+            
 
         plt.tight_layout()
     
@@ -1196,7 +1212,7 @@ def plot_magnon_dispersion_triple_with_zoom(magnonDispersion, clim_max = 1000):
 
     plt.show()
 
-def plot_magnon_dispersion_separate(magnonDispersion, clim_max = 1000):
+def plot_magnon_dispersion(magnonDispersion, clim_max = 1000):
 
     '''
 
@@ -2608,8 +2624,40 @@ def fft_transport_underneath(meshdims, cellsize, t, V, damping, MEC, ani, T, typ
     plt.savefig(savename, dpi=500)
     plt.show()
 
+def plot_uniaxial_analytical_dispersion():
+    
+    '''
+    
+    Plots the analytical disperison relation for a system with uniaxial anisotropy.
+    Plots 2D and 3D in the same plot
+    
+    '''
+    
+    # Define the constants
+    Ah = -460e3 # J/m^3
+    K_easy = 21 # J/m^3
+    A = 76e-15 # J/m
+    a = 5e-9 # m
+    hbar = 1.0546e-34 # m^2 kg/s
+    gamma_e = 2.802e9 # s^-1 T^-1
+    Ms = 2.1e3 # A/m
+    C = hbar*gamma_e/Ms
+    
+    # Define the dispersion relation
+    def E(q, D):
+        return C*np.sqrt(16*np.abs(Ah)*K_easy + 4*A*D/a**2 * q**2)
+    
+    x = np.linspace(-1000,1000, 100)
+    
+    plt.plot(x, E(x,2))
+    plt.plot(x, E(x,3))
+    
+    plt.show()
+
 def main():
 
+
+    plot_uniaxial_analytical_dispersion()
 
     #### MAGNON TRANSPORT ### 
 
@@ -2711,7 +2759,7 @@ def main():
         # plot_cut_offs(fs, ts, 'IP')
         plot_data_with_fitted_functions(fs, ts, 'IP', thickness)
     
-    across_voltages()
+    # across_voltages()
     
     ## Both systems across voltages ###
     

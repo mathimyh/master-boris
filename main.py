@@ -7,8 +7,8 @@ import sys
 import os
 sys.path.insert(0, 'C:/users/mathimyh/documents/boris data/borispythonscripts/')
 
-from NetSocks import NSMultiClient   # type: ignore
-from NetSocks import NSClient # type:ignore
+# from NetSocks import NSMultiClient   # type: ignore
+# from NetSocks import NSClient # type:ignore
 
 def main():
     
@@ -20,16 +20,16 @@ def main():
     meshdims = (Lx, Ly, Lz)
 
     # Parameters
-    t = 200 #ps
-    V = -0.0115 # mV
+    t = 200 # ps
+    V = -0.450 # mV
     damping = 4e-4 
     MEC = 0
     ani = 'IP'
     T = 0.3
     type = 'AFM'
-    hard_axis = 0
+    hard_axis = 1
     critical_H = 4.711e6
-    Hfield = 1*critical_H
+    Hfield = 0*critical_H
     x_vals = [2000, 2100, 2200, 3000, 3500, 4000]
     # x_vals = [520, 600, 700, 800, 900, 1000]
     # x_vals = [1000, 1200, 1300, 1500, 1700, 2000]
@@ -40,20 +40,37 @@ def main():
 
     steadystate = params.Steadystate(**common_params, x_vals=x_vals)
     
-    timeAvgSA = params.TimeAvgSA(**common_params, x_start=2020, x_stop=4000)
+    timeAvgSA = params.TimeAvgSA(**common_params, x_start=3020, x_stop=6000)
     
-    magnonDispersion = params.MagnonDispersion(**common_params, component='y', axis='x', steadystate=True, triple=False)
+    magnonDispersion = params.MagnonDispersion(**common_params, component='y', axis='x', steadystate=0, triple=0)
     
     magnonDispersionSinc = params.MagnonDispersionSinc(**common_params, component='y', axis='x')
     
     criticalT = params.CriticalT(**common_params, max_T = 100)
 
     # ns = NSClient(); ns.configure(True, False)
+    
+    # timeavgs = []
+    # V0 = 0.06
+    # for i in range(1, 10):
+    #     temp2 = params.TimeAvgSA([4000, 50, 5*i], cellsize, 100, -V0*i, damping,
+    #                              MEC, ani, T, type, hard_axis, Hfield, x_start=2020, x_stop=4000)
+    #     timeavgs.append(temp2)
+    
+    # timeavgs = []
+    # factor = Lz/20
+    # now = 0.025
+    # while now < 1.4:
+    #     temp2 = params.TimeAvgSA(meshdims, cellsize, 100, -now*factor, damping,
+    #                              MEC, ani, T, type, hard_axis, Hfield, x_start=3020, x_stop=6000)
+    #     timeavgs.append(temp2)
+    #     now += 0.025
 
-    # transport.Init_AFM(ns, timeAvgSA)
-    # transport.time_avg_SA(meshdims, cellsize,t,V, damping, MEC, ani, T, type, hard_axis, 520, 1000)
-    # plotting.plot_tAvg_SA(timeAvgSA)
-    # plotting.fft_transport_underneath(*params)
+    # # transport.Init_AFM(ns, timeAvgSA)
+    # # transport.time_avg_SA(meshdims, cellsize,t,V, damping, MEC, ani, T, type, hard_axis, 520, 1000)
+    # for timeavg in timeavgs:
+    #     plotting.plot_tAvg_SA(timeavg)
+    # plotting.fft_transport_underneath(*params)s
     # transport.save_steadystate(ns, steadystate)
     # transport.time_avg_SA(ns, timeAvgSA)
     # plotting.plot_plateau(steadystate)
@@ -64,21 +81,25 @@ def main():
     # plotting.plot_magnon_dispersion_overlay(magnonDispersion, clim_max=10000)
     # transport.current_density(*params)
     # plotting.plot_critical_T(criticalT)
+    # plotting.plot_magnon_dispersion_triple_with_zoom(magnonDispersion)
+    # plotting.plot_magnon_dispersion(magnonDispersion)
+    plotting.plot_magnon_dispersion_separate(magnonDispersion, 4000)
+    # plotting.plot_tAvg_SA(timeAvgSA)
     
-    nsm = NSMultiClient(scriptserverports = range(1000,1002), cudaDevices = range(0,2))
-    nsm.configure(True, False)
+    # nsm = NSMultiClient(scriptserverports = range(1000,1002), cudaDevices = range(0,2))
+    # nsm.configure(True, False)
 
 
     #### MULTI DISPERSIONS ####
 
-    dispersions = []
-    for i in [(0, 0), (1, critical_H)]:
-        temp = params.Steadystate(meshdims, cellsize, t, V, damping, 
-                                        MEC, ani, T, type, i[0], i[1], False)
-        dispersions.append(temp)
+    # dispersions = []
+    # for i in [(0, 0), (1, critical_H)]:
+    #     temp = params.Steadystate(meshdims, cellsize, t, V, damping, 
+    #                                     MEC, ani, T, type, i[0], i[1], False)
+    #     dispersions.append(temp)
 
     
-    nsm.Run(transport.save_steadystate, dispersions)
+    # nsm.Run(transport.save_steadystate, dispersions)
 
     # nsm.Run(dispersion_relations.magnon_dispersion, dispersions)
 
