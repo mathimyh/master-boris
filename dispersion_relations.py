@@ -83,7 +83,7 @@ def magnon_dispersion(ns, magnonDispersion):
                 ns.dp_saveappendasrow(output_filex, int_dir)
         time += time_step
 
-    # plotting.plot_magnon_dispersion(magnonDispersion)
+    # plotting.plot_magnon_dispersion_with_zoom(magnonDispersion)
 
 def phonon_dispersion(meshdims, cellsize, t, damping, x_start, x_stop, MEC, ani, dir):
 
