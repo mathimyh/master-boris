@@ -34,13 +34,15 @@ def magnon_dispersion(ns, magnonDispersion):
 
     Ms = 2.1e3
 
-    y_vals = [5, 5, 5]
+    y_vals = [5]
+    if magnonDispersion.triple:
+        y_vals = [5,25,45]
     
     
+    # Either load a simulation in steadystate or initialize one in ground state
     if magnonDispersion.steadystate:
         sim_name = magnonDispersion.simname()
         ns.loadsim(sim_name)
-        y_vals = [5,25,45]
     
     else:
         if magnonDispersion.type == 'AFM':
@@ -70,8 +72,9 @@ def magnon_dispersion(ns, magnonDispersion):
             ns.Relax(['time', time + time_step])
         
         for i, output_filex in enumerate(output_files):
-            # if axis == 'x':
             ns.dp_getexactprofile((np.array([magnonDispersion.cellsize/2, y_vals[i], magnonDispersion.meshdims[2]-magnonDispersion.cellsize])*1e-9), (np.array([magnonDispersion.meshdims[0] - magnonDispersion.cellsize/2, y_vals[i], magnonDispersion.meshdims[2]])*1e-9), magnonDispersion.cellsize*1e-9, 0)
+            
+            # If we have the biaxial system, then every other measurement is for z-component
             if magnonDispersion.hard_axis and i % 2 != 0:
                 ns.dp_div(3, Ms)
                 ns.dp_saveappendasrow(output_filex, 3)
