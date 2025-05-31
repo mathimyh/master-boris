@@ -88,12 +88,15 @@ def Init_AFM(ns, params):
 
     # Critical field, found from calculations
     AFM.setfield(params.Hfield, 90, 90)
+    
+    ns.cuda(1)
 
     # Relax to reach plateau of fluctuations
     relax_time = 10e-12
     if params.hard_axis and params.Hfield > 0: # Needs longer time with these conditions
         relax_time = 50e-12
     ns.Relax(['time', relax_time])
+    
 
     # Return the mesh, ready for simulations
     return AFM
@@ -435,7 +438,7 @@ def time_avg_SA(ns, timeAvgSA,sim_num=False):
     params.make_folder(savename)
     ns.savedatafile(savename)
 
-    # ns.cuda(1)
+    ns.cuda(1)
 
     # Voltage stage
     ns.V([0.001*timeAvgSA.V, 'time', timeAvgSA.t*1e-12, 'time', timeAvgSA.t*1e-12 / 200])
