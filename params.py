@@ -45,20 +45,25 @@ class Params:
     
 class TimeAvgSA(Params):
 
-    def __init__(self, meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, Hfield, x_start, x_stop):
+    def __init__(self, meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, Hfield, direction, x_start, x_stop):
         super().__init__(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, Hfield)
+        self.dir = direction
         self.x_start = x_start
         self.x_stop = x_stop
+        
+        self.dir_str = ''
+        if direction != 'x':
+            self.dir_str = direction + '_'
 
     def simname(self):
         return path + self.type + '/' + self.modules_folder + self.ani + '/sims/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2])  + f"/V{self.V:.3f}" + '_damping' + str(self.damping) + '_' + str(self.T) + 'K_steady_state.bsm'
 
     def cachename(self):
-        return path + self.type + '/' + self.modules_folder + self.ani + '/cache/' + 't_avg/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/tAvg_damping' + str(self.damping) + f"_V{self.V:.3f}" + '_' + str(self.T) + 'K.txt'
+        return path + self.type + '/' + self.modules_folder + self.ani + '/cache/' + 't_avg/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/' + self.dir_str + 'tAvg_damping' + str(self.damping) + f"_V{self.V:.3f}" + '_' + str(self.T) + 'K.txt'
     
     def plotname(self):
-        return self.type + '/' + self.modules_folder + self.ani + '/plots/' + 't_avg/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/tAvg_damping' + str(self.damping) + f"_V{self.V:.3f}" + '_' + str(self.T) + 'K.png'
-    
+        return self.type + '/' + self.modules_folder + self.ani + '/plots/' + 't_avg/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/' + self.dir_str + 'tAvg_damping' + str(self.damping) + f"_V{self.V:.3f}" + '_' + str(self.T) + 'K.png'
+
 class Steadystate(Params):
 
     def __init__(self, meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, Hfield, x_vals=False):

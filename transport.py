@@ -244,7 +244,7 @@ def virtual_current(ns, params):
 
     return M
 
-def save_steadystate(ns, steadystate):
+def save_steadystate(ns, steadystate, sim_num=False):
 
     '''
     
@@ -258,7 +258,11 @@ def save_steadystate(ns, steadystate):
     M = virtual_current(ns, steadystate)
     # ns.iterupdate(200)
 
-    savename = steadystate.simname()
+    if not sim_num:
+        savename = steadystate.simname()
+    else:
+       savename = steadystate.simname()[:-4]
+       savename += '_sim' + str(sim_num) + '.bsm' 
     params.make_folder(savename)
 
     # Run the simulation while also saving <mxdmdt> at x_vals every 5ps
@@ -376,8 +380,8 @@ def current_density(ns, currentDensity):
 
     ns.V([0.001*currentDensity.V, 'time', currentDensity.t*1e-12, 'time', 1e-12])
 
-    
-def time_avg_SA(ns, timeAvgSA):
+ 
+def time_avg_SA(ns, timeAvgSA,sim_num=False):
 
     '''
 
@@ -387,19 +391,47 @@ def time_avg_SA(ns, timeAvgSA):
     '''
 
 
-    sim_name = timeAvgSA.simname()
+    if not sim_num:
+        sim_name = timeAvgSA.simname()
+    else:
+       sim_name = timeAvgSA.simname()[:-4]
+       sim_name += '_sim' + str(sim_num) + '.bsm' 
     
     # Loading the sim. All the parameters and parameters variation is still there so don't need to add back
     ns.loadsim(sim_name)
     ns.reset()
 
     ns.setdata('time')
-    for i in range(int((timeAvgSA.x_stop - timeAvgSA.x_start)/timeAvgSA.cellsize)):
-        temp = np.array([timeAvgSA.x_start + (i*timeAvgSA.cellsize), 0, timeAvgSA.meshdims[2], 
-                         timeAvgSA.x_start + (1 + i)*timeAvgSA.cellsize, timeAvgSA.meshdims[1], timeAvgSA.meshdims[2]]) * 1e-9 # Only measure at the top
-        ns.adddata('<mxdmdt>', timeAvgSA.type, temp)
-
-    savename = timeAvgSA.cachename()
+    
+    if timeAvgSA.direction == 'x':
+        for i in range(int((timeAvgSA.x_stop - timeAvgSA.x_start)/timeAvgSA.cellsize)):
+            # Only measure at the top
+            temp = np.array([timeAvgSA.x_start + (i*timeAvgSA.cellsize), 0, timeAvgSA.meshdims[2], 
+                            timeAvgSA.x_start + (1 + i)*timeAvgSA.cellsize, timeAvgSA.meshdims[1], 
+                            timeAvgSA.meshdims[2]]) * 1e-9 
+            ns.adddata('<mxdmdt>', timeAvgSA.type, temp)
+    
+    elif timeAvgSA.direction == 'z':
+        for i in range(int((timeAvgSA.meshdims[2]/timeAvgSA.cellsize))-1):
+            # Measure through middle of sample
+            temp = np.array([timeAvgSA.meshdims[0]/2, 0, timeAvgSA.cellsize*i, 
+                             timeAvgSA.meshdims[0]/2, timeAvgSA.meshdims[1], 
+                             timeAvgSA.cellsize*(i+1)]) * 1e-9 
+            ns.adddata('<mxdmdt>', timeAvgSA.type, temp)
+            
+    elif timeAvgSA.direction == 'y':
+        # Only measure at the top
+        for i in range(int((timeAvgSA.meshdims[1]/timeAvgSA.cellsize))-1):
+            temp = np.array([timeAvgSA.meshdims[0]/2, timeAvgSA.cellsize*i, timeAvgSA.meshdims[2],
+                             timeAvgSA.meshdims[0]/2], timeAvgSA.cellsize*(i+1), 
+                            timeAvgSA.meshdims[2])
+            ns.adddata('<mxdmdt>', timeAvgSA.type, temp)
+            
+    if not sim_num:
+        savename = timeAvgSA.cachename()
+    else:
+        savename = timeAvgSA.cachename()[:-4]
+        savename += '_sim' + str(sim_num) + '.txt'
     params.make_folder(savename)
     ns.savedatafile(savename)
 
@@ -408,7 +440,7 @@ def time_avg_SA(ns, timeAvgSA):
     # Voltage stage
     ns.V([0.001*timeAvgSA.V, 'time', timeAvgSA.t*1e-12, 'time', timeAvgSA.t*1e-12 / 200])
 
-    plotting.plot_tAvg_SA(timeAvgSA)
+    plotting.plot_tAvg_SA(timeAvgSA, sim_num)
  
 # Save 2D magnetization
 def time_avg_SA_2D(meshdims, cellsize, t, V, damping, data, x_start, x_stop, MEC, ani):
@@ -512,42 +544,6 @@ def time_avg_SA_2D_y(meshdims, cellsize, t, V, damping, data, x_start, x_stop, M
     ns.Run()
 
     plotting.plot_tAvg_SA_2D_y(meshdims, cellsize, t, V, damping, data, x_start, x_stop, MEC, ani)
-
-def time_avg_SA_z(ns, meshdims, cellsize, t, V, damping, MEC, ani, T, type):
-    modules_folder = 'ex+ani'
-    if MEC:
-        modules_folder = '+mec'
-    modules_folder += '/'
-
-    folder_name = type + '/' + modules_folder + ani + '/cache/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
-
-    # sim_name = 'C:/Users/mathimyh/documents/boris data/simulations/boris_fordypningsoppgave/' + ani + '/sims/' + mec_folder + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/V' + str(V) + '_damping' + str(damping) + '_steady_state.bsm'
-    sim_name = path + type + '/' + modules_folder + ani + '/sims/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/V' + str(V) + '_damping' + str(damping) + '_' + str(T) + 'K_steady_state.bsm'
-    ns.reset()
-    
-    # Loading the sim. All the parameters and parameters variation is still there so don't need to add back
-    ns.loadsim(sim_name)
-    ns.reset()
-
-    ns.setdata('time')
-    for i in range(int((meshdims[2]/cellsize))-1):
-        temp = np.array([meshdims[0]/2, cellsize*i, 0, meshdims[0]/2, meshdims[1], cellsize*(i+1)]) * 1e-9 # Measure through middle of sample
-        ns.adddata('<mxdmdt>', type, temp)
-
-    savename = path + type + '/' + modules_folder + ani + '/cache/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/z_dir_tAvg_damping' + str(damping) + '_V' + str(V) + '_' + str(T) + 'K.txt'
-
-    ns.savedatafile(savename)
-
-    # ns.cuda(1)
-
-    # Voltage stage
-    ns.V([0.001*V, 'time', t*1e-12, 'time', t*1e-12 / 200])
-
-    # ns.Run()
-
-    plotting.plot_tAvg_SA_z(meshdims, cellsize, t, V, damping, MEC, ani, T, type)
 
 # Get a profile of the magnetization
 def profile_from_sim(t, V, damping, sim_name, x_start, x_stop):

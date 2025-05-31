@@ -1,5 +1,8 @@
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
+from matplotlib.colors import to_rgb, to_hex
+from colorspacious import cspace_convert
+import seaborn as sns
 import numpy as np
 import os
 import params
@@ -85,7 +88,7 @@ def plot_plateau(steadystate):
     fig.savefig(plotname, dpi=500)
     plt.show()
 
-def plot_tAvg_SA(timeAvgSA):
+def plot_tAvg_SA(timeAvgSA, sim_num=False):
 
     '''
     
@@ -95,54 +98,14 @@ def plot_tAvg_SA(timeAvgSA):
 
     plt.figure(figsize=(10, 7))
 
-    filename = timeAvgSA.cachename()
+    if not sim_num:
+        filename = timeAvgSA.cachename()
+    else:
+        filename = timeAvgSA.cachename()[:-4]
+        filename += '_sim' + str(sim_num) + '.txt'
 
     try:
         f = open(filename, 'r')
-
-    # elif os.path.isfile(filename_2D):
-    #     f = open(filename_2D, 'r')
-
-    #     lines = f.readlines()
-    #     lines = lines[10:]
-
-    #     # Turn the raw data into a list of numpy arrays. Every entry in the arrays are floats.
-    #     raw_data = []
-    #     for line in lines:
-
-    #         # Make a list of all entries and an empty array to fill only the component we want in
-    #         vec = line.strip().split('\t')[1:]
-    #         temp = np.empty(int(len(vec)/3))
-
-    #         # This is the component we look at. In plane means x-component (0) and out-of-plane means z (2)
-    #         direction = 0
-    #         if ani == 'OOP':
-    #             direction = 2
-
-    #         # Iterate over all and add only the component we want. Convert to float
-    #         indexer = 0
-    #         while direction < len(vec):
-    #             temp[indexer] = float(vec[direction])
-    #             indexer += 1
-    #             direction += 3
-
-    #         # Reshape to 2D array and add to the data list
-    #         raw_data.append(temp.reshape(meshdims[2], int(len(temp)/(meshdims[2]))))
-
-    #     # Now find the time averages for all the data
-    #     tAvg_data = np.zeros_like(raw_data[0])
-
-    #     for k, matrix in enumerate(raw_data):
-    #         for i, row in enumerate(matrix):
-    #             for j, col in enumerate(row):
-    #                 tAvg_data[i][j] += col
-    #                 if k == len(raw_data)-1:
-    #                     tAvg_data[i][j] /= len(raw_data)
-
-
-        
-    #     ys = [tAvg_data[0][i] for i in range(len(tAvg_data[0]))]
-    #     xs = np.linspace(x_start, x_stop/1000, len(ys))
 
     except FileNotFoundError:
         print("No simulations have been done with these params... V = ", timeAvgSA.V)
@@ -179,9 +142,77 @@ def plot_tAvg_SA(timeAvgSA):
             
         xs = np.linspace(timeAvgSA.x_start/1000, timeAvgSA.x_stop/1000, len(ys))
             
-        plt.plot(xs, ys, linewidth=2)
+        plt.plot(xs, np.array(ys)/1e11, linewidth=2)
         plt.xlabel(r'$x$ $(\mu m)$')
         plt.ylabel(r'$\mu_x$')
+        
+        
+        plt.tight_layout()
+
+        if not sim_num:
+            plotname = timeAvgSA.plotname()
+        else:
+            plotname = timeAvgSA.plotname()
+            plotname += '_sim' + str(sim_num) + '.png'
+        params.make_folder(plotname)
+        plt.savefig(plotname, dpi=500)
+        
+        # plt.close()
+        plt.show()
+
+def plot_tAvg_SA_z(timeAvgSA):
+
+    '''
+    
+    The standard function for plotting <mxdmdt> over distance in magnon transport simulations. 
+
+    '''
+
+    plt.figure(figsize=(10, 7))
+
+    filename = timeAvgSA.cachename()
+
+    try:
+        f = open(filename, 'r')
+
+    except FileNotFoundError:
+        print("No simulations have been done with these params... V = ", timeAvgSA.V)
+
+    else:
+        lines = f.readlines()
+        lines = lines[10:]
+
+        vals = []
+
+
+        for line in lines:
+            # This is the component we look at. In plane means x-component (0) and out-of-plane means z (2)
+            direction = 0
+            if timeAvgSA.ani == 'OOP':
+                direction = 2
+            vec = line.split('\t')
+            all_vals = vec[1:]
+            temp = []
+            while direction < len(all_vals):
+                temp.append(float(all_vals[direction]))
+                direction += 3
+            vals.append(temp)
+
+
+        ys = []
+
+        for i in range(len(vals[0])):
+            val = 0
+            for j in range(len(vals)):
+                val += float(vals[j][i])
+            val /= len(vals)
+            ys.append(val)
+            
+        xs = np.linspace(timeAvgSA.x_start, timeAvgSA.x_stop, len(ys))
+            
+        plt.plot(xs, np.array(ys)/1e11, linewidth=3)
+        plt.xlabel(r'z (μm)')
+        plt.ylabel(r'$\mu$')
         plt.tight_layout()
 
         plotname = timeAvgSA.plotname()
@@ -190,7 +221,7 @@ def plot_tAvg_SA(timeAvgSA):
         
         # plt.close()
         plt.show()
-        
+ 
 def plot_tAvg_SA_underneath(meshdims, cellsize, t, V, damping, MEC, ani, T, type, x_start, x_stop):
 
     '''
@@ -508,122 +539,6 @@ def plot_tAvg_SA_2D_subplots(meshdims, cellsize, t, V, damping, data, x_start, x
     plt.savefig(plotname, dpi=500)
     plt.show()
 
-def plot_tAvg_SA_z(meshdims, cellsize, t, V, damping, MEC, ani, T, type):
-
-    '''
-    
-    Similar function to the standard, but plots <mxdmdt> along z-direction directly underneath the injector.
-
-    NOTE: This function should be updated to the object-oriented version.
-    
-    '''
-
-    plt.figure(figsize=(10, 7))
-
-    modules_folder = 'ex+ani'
-    if MEC:
-        modules_folder += '+mec'
-    modules_folder += '/'
-
-    folder_name = type + '/' + modules_folder + ani + '/plots/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2])
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
-
-    filename = type + '/' + modules_folder + ani + '/cache/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/z_dir_tAvg_damping' + str(damping) + '_V' + str(V) + '_' + str(T) + 'K.txt'
-    filename_2D = type + '/' + modules_folder + ani + '/cache/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/2D_tAvg_damping' + str(damping) + '_V' + str(V) + '_' + str(T) + 'K.txt'
-
-    if os.path.isfile(filename):
-        f = open(filename, 'r')
-
-        lines = f.readlines()
-        lines = lines[10:]
-
-        vals = []
-
-        for line in lines:
-            # This is the component we look at. In plane means x-component (0) and out-of-plane means z (2)
-            direction = 0
-            if ani == 'OOP':
-                direction = 2
-            vec = line.split('\t')
-            all_vals = vec[1:]
-            temp = []
-            while direction < len(all_vals):
-                temp.append(float(all_vals[direction]))
-                direction += 3
-            vals.append(temp)
-
-
-        ys = []
-
-        for i in range(len(vals[0])):
-            val = 0
-            for j in range(len(vals)):
-                val += float(vals[j][i])
-            val /= len(vals)
-            ys.append(val)
-
-        # ys = [y/ys[-1] for y in ys]
-        xs = np.linspace(0, meshdims[2]/1000, len(ys))
-        ys.reverse()
-
-    elif os.path.isfile(filename_2D):
-        f = open(filename_2D, 'r')
-
-        lines = f.readlines()
-        lines = lines[10:]
-
-        # Turn the raw data into a list of numpy arrays. Every entry in the arrays are floats.
-        raw_data = []
-        for line in lines:
-
-            # Make a list of all entries and an empty array to fill only the component we want in
-            vec = line.strip().split('\t')[1:]
-            temp = np.empty(int(len(vec)/3))
-
-            # This is the component we look at. In plane means x-component (0) and out-of-plane means z (2)
-            direction = 0
-            if ani == 'OOP':
-                direction = 2
-
-            # Iterate over all and add only the component we want. Convert to float
-            indexer = 0
-            while direction < len(vec):
-                temp[indexer] = float(vec[direction])
-                indexer += 1
-                direction += 3
-
-            # Reshape to 2D array and add to the data list
-            raw_data.append(temp.reshape(meshdims[2], int(len(temp)/(meshdims[2]))))
-
-        # Now find the time averages for all the data
-        tAvg_data = np.zeros_like(raw_data[0])
-
-        for k, matrix in enumerate(raw_data):
-            for i, row in enumerate(matrix):
-                for j, col in enumerate(row):
-                    tAvg_data[i][j] += col
-                    if k == len(raw_data)-1:
-                        tAvg_data[i][j] /= len(raw_data)
-
-
-        
-        ys = [tAvg_data[0][i] for i in range(len(tAvg_data[0]))]
-        xs = np.linspace(0, meshdims[2]/1000, len(ys))
-
-    else:
-        print("No simulations have been done with these params")
-        exit()
-
-    plt.plot(xs, ys, linewidth=2)
-    plt.xlabel(r'$z$ $(\mu m)$')
-    plt.ylabel(r'$\mu_x$')
-    plt.tight_layout()
-
-    plotname = type + '/' + modules_folder + ani + '/plots/' + 't_avg/' + str(meshdims[0]) + 'x' + str(meshdims[1]) + 'x' + str(meshdims[2]) + '/z_dir_tAvg_damping' + str(damping) + '_V' + str(V) + '_' + str(T) + 'K.png'
-    plt.savefig(plotname, dpi=500)
-    # plt.show()
-
 def plot_tAvg_comparison_with_reference(plots, legends, savename, ani):
 
     '''
@@ -789,11 +704,35 @@ def plot_tAvg_comparison(plots, legends, savename, ani):
     
     '''
 
-    plt.figure(figsize=(13,8))
+    plt.figure(figsize=(14,7))
+    ax = plt.subplot(111)
 
     N = len(plots)
-    colors = plt.cm.viridis(np.linspace(0,1,N+1))
-    # colors = ['teal', 'darkviolet']
+    # colors = plt.cm.viridis(np.linspace(0,1,N+1))
+    
+    def get_lab_ramp(base_hex, N, lightness_range=(85, 40)):
+        # Convert base color to LAB
+        base_rgb = np.array(to_rgb(base_hex))[None, :]
+        base_lab = cspace_convert(base_rgb, "sRGB1", "CIELab")[0]
+
+        # Vary lightness, keep a and b (chroma) fixed
+        L_vals = np.linspace(lightness_range[0], lightness_range[1], N)
+        lab_colors = np.array([[L, base_lab[1], base_lab[2]] for L in L_vals])
+        rgb_colors = cspace_convert(lab_colors, "CIELab", "sRGB1")
+
+        # Clip to valid RGB
+        rgb_colors = np.clip(rgb_colors, 0, 1)
+        return [to_hex(c) for c in rgb_colors]
+    
+    green_color = '#1B9E77'
+    orange_color = '#D95F02'
+    
+    colors = get_lab_ramp(orange_color, N)
+    
+    x1, x2, y1, y2 = 3.1 , 3.4, 0.0 , 0.3
+    axins = ax.inset_axes(
+        [0.5, 0.3, 0.4, 0.67],
+        xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
 
     for k, plot in enumerate(plots):
 
@@ -841,7 +780,7 @@ def plot_tAvg_comparison(plots, legends, savename, ani):
         #     ys = ys[int(len(ys)/2):]
         #     xs = np.linspace(2.02, 2.5, len(ys))
 
-        # If large temperatures we have to adjust for background noise
+        # Adjust for background noise
         if k > 2:
             background = 4*sum([y for y in ys[3*int(len(ys)/4):]]) / len(ys)
             ys = [y - background for y in ys]
@@ -849,24 +788,38 @@ def plot_tAvg_comparison(plots, legends, savename, ani):
         leg = round(ys[0] * 1e-11, 1)
 
         ys = [(y )/ys[0] for y in ys]
-        xs = np.linspace(2.02, 4, len(ys))
+        xs = np.linspace(3.02, 6, len(ys))
 
-        plt.plot(xs, ys, label=legends[k], linewidth=3, color=colors[k])
+        ax.plot(xs, ys, label=legends[k], linewidth=3, color=colors[k])
         # plt.plot(xs, ys, label=str(leg), linewidth=3, color=colors[k])
+        
+        # if k % 2 == 0:
+        #     linestyle = 'solid'
+        # else:
+        #     linestyle = 'dashed'
+        # if k % 2 == 0:
+        axins.plot(xs, ys, color=colors[k], linewidth=3)
+        
+    ax.indicate_inset_zoom(axins, edgecolor='black')
 
     plt.xlabel('x (μm)')
     plt.ylabel(r'$\mu$/$\mu_0$')
+    
+    
+
+    
 
     # plt.legend(title= r'$\mu$ value underneath injector ($10^{11}$)')
-    plt.legend(title='Thickness (layers)')
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), title='Thickness (layers)')
 
+    plt.tight_layout()
     plt.savefig(savename, dpi=500)
     plt.show()
 
 
 #### MAGNON DISPERSION PLOTS ####
 
-def plot_magnon_dispersion_with_zoom(magnonDispersion, clim_max = 1000):
+def plot_magnon_dispersion(magnonDispersion, zoom, clim_max = 1000):
 
     '''
     
@@ -919,41 +872,43 @@ def plot_magnon_dispersion_with_zoom(magnonDispersion, clim_max = 1000):
 
         final_result = [fourier_data[i] for i in range(int(0.5 *freq_len),freq_len)]
 
-        label = 'q' + magnonDispersion.axis
+        label = r'$q_{' + magnonDispersion.axis + r'}$a' 
 
         if magnonDispersion.hard_axis:
             ax1[i].imshow(final_result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
             ax1[i].set_xlabel(label)
             ax1[i].set_ylabel(ylabel)
 
-            x1, x2, y1, y2 = -0.15, 0.15, 0, 0.3
-            axins = ax1[i].inset_axes(
-                [0.5, 0.5, 0.47, 0.47],
-                xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
-            axins.imshow(final_result, extent = [-k_max, k_max,f_min, f_max], origin='lower')
+            if zoom:
+                x1, x2, y1, y2 = -0.15, 0.15, 0, 0.3
+                axins = ax1[i].inset_axes(
+                    [0.5, 0.5, 0.47, 0.47],
+                    xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
+                axins.imshow(final_result, extent = [-k_max, k_max,f_min, f_max], origin='lower')
 
-            ax1[i].indicate_inset_zoom(axins, edgecolor='black')
+                ax1[i].indicate_inset_zoom(axins, edgecolor='black')
 
-            ax1[i].title.set_text(titles[i])
+                ax1[i].title.set_text(titles[i])
 
         else:
             ax1.imshow(final_result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
             ax1.set_xlabel(label)
             ax1.set_ylabel(ylabel)
 
-            x1, x2, y1, y2 = -0.3, 0.3, 0, 0.4
-            axins = ax1.inset_axes(
-                [0.4, 0.52, 0.6, 0.4],
-                xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
-            axins.imshow(final_result, extent = [-k_max, k_max,f_min, f_max], origin='lower', clim=(0,5000))
-            axins.set_yticks([0.0, 0.2, 0.4])
+            if zoom:
+                x1, x2, y1, y2 = -0.3, 0.3, 0, 0.4
+                axins = ax1.inset_axes(
+                    [0.4, 0.52, 0.6, 0.4],
+                    xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
+                axins.imshow(final_result, extent = [-k_max, k_max,f_min, f_max], origin='lower', clim=(0,5000))
+                axins.set_yticks([0.0, 0.2, 0.4])
 
-            ax1.indicate_inset_zoom(axins, edgecolor='white', alpha=1)
-        
-            for spine in axins.spines.values():
-                spine.set_edgecolor('white')
-                
-            axins.tick_params(colors='white')
+                ax1.indicate_inset_zoom(axins, edgecolor='white', alpha=1)
+            
+                for spine in axins.spines.values():
+                    spine.set_edgecolor('white')
+                    
+                axins.tick_params(colors='white')
         # ax1.set_ylim(0, 0.1)
 
         plt.tight_layout()
@@ -987,7 +942,7 @@ def plot_magnon_dispersion_separate(magnonDispersion, clim_max = 1000):
         fig, ax = plt.subplots(1,3)
 
         fig.set_figheight(5)
-        fig.set_figwidth(16)
+        fig.set_figwidth(15)
         yvals =[5,25,45]
         
         for i, output_filex in enumerate(output_files):
@@ -1010,7 +965,7 @@ def plot_magnon_dispersion_separate(magnonDispersion, clim_max = 1000):
 
             ax[i].imshow(result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
 
-            label = 'q' + magnonDispersion.axis
+            label = r'$q_{' + magnonDispersion.axis + r'}$a' 
 
             ax[i].set_xlabel(label)
             ax[i].set_ylabel(ylabel)
@@ -1058,7 +1013,7 @@ def plot_magnon_dispersion_separate(magnonDispersion, clim_max = 1000):
 
             ax[i].imshow(result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
 
-            label = 'q' + magnonDispersion.axis
+            label = r'$q_{' + magnonDispersion.axis + r'}$a'
 
             ax[i].set_xlabel(label)
             ax[i].set_ylabel(ylabel)
@@ -1106,7 +1061,7 @@ def plot_magnon_dispersion_separate(magnonDispersion, clim_max = 1000):
 
         ax1.imshow(result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
 
-        label = 'q' + magnonDispersion.axis
+        label = r'$q_{' + magnonDispersion.axis + r'}$a'
 
         ax1.set_xlabel(label)
         ax1.set_ylabel(ylabel)
@@ -1220,6 +1175,106 @@ def plot_magnon_dispersion_triple(magnonDispersion, zoom, clim_max = 1000):
 
     plt.show()
 
+def plot_magnon_dispersion_double(magnonDispersion, zoom, clim_max = 1000):
+    
+    '''
+    
+    Plot 2 magnon dispersion plots horizontally in the same figure, including a zoom-in on an area if desired.
+    Used in the thesis since y=5 and y=45 results are the same, so only show y=5 and y=25.
+    
+    '''
+
+    # FM and AFM range in different frequencies
+    if magnonDispersion.type == 'AFM':
+        time_step = 0.1e-12
+        ylabel = 'f (THz)'
+        divisor = 1e12
+    elif magnonDispersion.type == 'FM':
+        time_step = 1e-12
+        ylabel = 'f (GHz)'
+        divisor = 1e9
+
+    output_files = magnonDispersion.cachename()
+    savename = magnonDispersion.plotname()
+    params.make_folder(savename)
+    
+    fig, ax = plt.subplots(1,2, sharey=True)
+
+    fig.set_figheight(5)
+    fig.set_figwidth(12)
+    yvals =[5,25]
+
+    # If hard axis then two consecutive files are y and x components
+    # Then they need to be superimposed on the same plot
+    loops = 1
+    if magnonDispersion.hard_axis:
+        loops = 2
+    
+    # Loop over the output files 
+    for i in range(0, int(len(output_files))-loops, loops):
+
+        results = []
+
+        # Add both y and z component to the results list if hard axis
+        # If easy axis then just the given component
+        for j in range(loops):
+            pos_time = np.loadtxt(output_files[i+j])
+
+            fourier_data = np.fft.fftshift(np.abs(np.fft.fft2(pos_time)))
+
+            freq_len = len(fourier_data)
+            k_len = len(fourier_data[0])
+            freq = np.fft.fftfreq(freq_len, time_step)
+            kvector = np.fft.fftfreq(k_len, 5e-9)
+
+            k_max = 2*np.pi*kvector[int(0.5 * len(kvector))]*5e-9
+            f_min = np.abs(freq[0])
+            f_max = np.abs(freq[int(0.5 * len(freq))])/divisor # THz for FM and GHz for FM
+            f_points = int(0.5 * freq_len)
+
+            result = np.array([fourier_data[i] for i in range(int(0.5 *freq_len),freq_len)])
+            results.append(result)
+
+        if loops == 2:
+            final_result = results[0] + results[1]
+        else:
+            final_result = results[0]
+
+        index = int(i/loops)
+
+        ax[index].imshow(final_result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
+
+        label = r'$q_{' + magnonDispersion.axis + r'}$a' 
+
+        ax[index].set_xlabel(label)
+        if index == 0:
+            ax[index].set_ylabel(ylabel)
+            title = 'Edge'
+        else:
+            title = 'Middle'
+        ax[index].title.set_text(title)
+
+        if zoom:
+            x1, x2, y1, y2 = -0.35, 0.35, 0, 0.5
+            axins = ax[index].inset_axes(
+                [0.35, 0.45, 0.7, 0.5],
+                xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
+            axins.imshow(final_result, extent = [-k_max, k_max,f_min, f_max], origin='lower', clim=(0,5000))
+            axins.set_yticks([0.0, 0.2, 0.4])
+
+            ax[index].indicate_inset_zoom(axins, edgecolor='white', alpha=1)
+        
+            for spine in axins.spines.values():
+                spine.set_edgecolor('white')
+                
+            axins.tick_params(colors='white')
+
+    plt.tight_layout()
+
+    plt.savefig(savename, dpi=500)
+
+    plt.show()
+    
 def plot_magnon_dispersion_together(magnonDispersion, clim_max = 1000):
 
     '''
@@ -1336,7 +1391,7 @@ def plot_dispersion_field_comparisons(plots, c_max1, c_max2):
         else:
             result += np.array([fourier_data[i] for i in range(int(0.5 *freq_len),freq_len)])
         
-            label = 'qy'
+            label = r'$q_{x}$a' 
 
             x1, x2, y1, y2 = -0.3, 0.3, 0, 0.4
             axins = axs[indexer].inset_axes(
@@ -1361,7 +1416,7 @@ def plot_dispersion_field_comparisons(plots, c_max1, c_max2):
 
     fig.tight_layout()
     
-    savename = 'AFM/custom/plots/dispersions_magnetic_field_comparison.png'
+    savename = 'AFM/custom/plots/biaxial_singlelayer_dispersions_magnetic_field_comparison.png'
 
     plt.savefig(savename, dpi=500)
 
@@ -1774,7 +1829,7 @@ def plot_diffusion_length_both_systems(plots1, plots2, ts, savename, ani, thickn
     
     both = [plots1, plots2]
     markers = ['s', 'v']
-    colors = ['tab:blue', 'tab:orange']
+    colors = ['#1B9E77', '#D95F02']
 
     flips_2layer = [0.1,0.113,0.12,0.163,0.175,0.2,0.213,0.225,0.238,0.250,0.263,0.275,0.312,0.325,0.338]
 
@@ -1887,18 +1942,6 @@ def plot_diffusion_length_both_systems(plots1, plots2, ts, savename, ani, thickn
                             # make sure the simulations that flip in the biaxial system is not included
                             if m != 1 or thickness != 10 or ts[k] not in flips_2layer:
                                 plt.plot(1e3*ts[k]/thickness, 1/params[1], marker=markers[m], markersize = 10, color=colors[m])
-                        
-                        # try:
-                        #     if thickness == 40:
-                        #         params, params_cov = curve_fit(g, fit_xs, exp_fit_ys, p0=[1e12, 2.5, 10, 0])
-                        #         plt.plot(1e3*ts[k]/thickness, 1/params[1] / params[0], marker=markers[m], markersize = 10, color=colors[m])
-                        #     else:
-                        #         params, params_cov = curve_fit(f, fit_xs, lin_fit_ys)
-                        #         plt.plot(1e3*ts[k]/thickness, 1/params[1], marker=markers[m], markersize = 10, color=colors[m])
-                        # except TypeError:
-                        #     print('Could not find a curve for this voltage: ', ts[k])
-                        # except ValueError:
-                        #     print('ydata was empty for this voltage: ', ts[k])
                         
     plt.xlabel(r'Voltage/thickness (μV/nm)')
     plt.ylabel(r'$L_D$')
@@ -2025,9 +2068,9 @@ def plot_diffusion_length_across_thicknesses(plots, ts, savename, ani):
 
     plt.figure(figsize=(10,7))
     
-    uniax_color = 'tab:blue'
+    uniax_color = '#1B9E77'
     uniax_marker = 's'
-    biax_color = 'tab:orange'
+    biax_color = '#D95F02'
     biax_marker = 'v'
 
     for k, plot in enumerate(plots):
@@ -2074,46 +2117,87 @@ def plot_diffusion_length_across_thicknesses(plots, ts, savename, ani):
                 print('min(ys) is empty for thickness = ', ts[k])
             else:
                 
+                original_ys = copy.deepcopy(ys)
+                    
                 # This is the data set we use for curve fitting
-                ys1 = [y + abs(min_y) for y in ys]
-                ys1 = np.array([np.log(p) for p in ys1])
+                fit_ys = [y + abs(min_y) for y in ys]
+                fit_ys = np.array([np.log(p) for p in fit_ys])
                 
                 # This is the data set we use for determining the cut-off
-                ys = np.array([np.log(p) for p in ys])
-                ys  = ys[np.isfinite(ys)]
+                cutoff_ys = np.array([np.log(p) for p in ys])
+                cutoff_ys  = cutoff_ys[np.isfinite(cutoff_ys)]
                 
-                xs = np.linspace(0, 2.98, len(ys1))
-                
-                # Apply to cut-off data
-                algo = rpt.Dynp(model="l2").fit(ys)
-                result = algo.predict(n_bkps=1)
-                
-                # Then cut off the list ands create new x-values list
-                ys1 = ys1[:result[0]]
-                xs = xs[:result[0]]
-                
-
-                def f(x, a, b):
-                    return a - b*x   
-
+                xs = np.linspace(0, 2.98, len(fit_ys))
+                    
+                # Find the cut-off before fitting the function
+                algo = rpt.Dynp(model="l2").fit(cutoff_ys)
                 try:
-                    params, params_cov = curve_fit(f, xs, ys1)
+                    result = algo.predict(n_bkps=1)
+                except:
+                    print('Data was too noisy for V = ', -ts[k])
+                else:
+
+                    # Then cut off the list ands create new x-values list
+                    # One for linear and one for exponential function fitting
+                    lin_fit_ys = fit_ys[:result[0]]
+                    exp_fit_ys = original_ys[:result[0]]
+                    fit_xs = xs[:result[0]]
+
+                    # Linear fit
+                    def f(x, a, b):
+                        return a - b*x   
+                    
+                    # Exponential with harmonic wave
+                    def g(x, a, b, c, d, e, f):
+                        return a*np.exp(-b*x) + c*np.sin(d*x + e)*np.exp(-f*x)
+                    
+                    # Exponential
+                    def h(x, a, b):
+                        return a*np.exp(-b*x)
+                    
                     if k < 8:
                         color = uniax_color
                         marker = uniax_marker
                     else:
                         color = biax_color
                         marker = biax_marker
-                    plt.plot(ts[k]/5, 1/params[1], marker=marker, markersize = 10, color=color)
-                    # plt.plot(xs, ys1)
-                except TypeError:
-                    print('Could not find a curve for this thickness: ', ts[k])
-                except ValueError:
-                    print('ydata was empty for this thickness: ', ts[k])
+                    
+                    if (k > 3 and k < 8) or (k > 11):
+                        try:
+                            params, params_cov = curve_fit(g, fit_xs, exp_fit_ys, p0=[1e12, 2, 5e11, 20, 0, 4])
+                        except TypeError:
+                            print('Could not find curve for this voltage')
+                        
+                        # If we get runtime error then there is no harmonic wave, just exponential decay
+                        except RuntimeError:
+                            params, params_cov = curve_fit(h, fit_xs, lin_fit_ys, p0=[1e12, 2])
+                            if 1/params[1] < 2:
+                                plt.plot(ts[k]/5, 1/params[1], marker=marker, markersize = 10, color=color)
+                        else:
+                            plt.plot(ts[k]/5, 1/params[1], marker=marker, markersize = 10, color=color)
+                            
+                    elif k != 9:
+                        params, params_cov = curve_fit(f, fit_xs, lin_fit_ys)
+                        plt.plot(ts[k]/5, 1/params[1], marker=marker, markersize = 10, color=color)
+
+                    # try:
+                    #     params, params_cov = curve_fit(f, xs, ys1)
+                    #     if k < 8:
+                    #         color = uniax_color
+                    #         marker = uniax_marker
+                    #     else:
+                    #         color = biax_color
+                    #         marker = biax_marker
+                    #     plt.plot(ts[k]/5, 1/params[1], marker=marker, markersize = 10, color=color)
+                    #     # plt.plot(xs, ys1)
+                    # except TypeError:
+                    #     print('Could not find a curve for this thickness: ', ts[k])
+                    # except ValueError:
+                    #     print('ydata was empty for this thickness: ', ts[k])
 
         
     plt.xlabel(r'Thickness (layers)')
-    plt.ylabel(r'$l_d$')
+    plt.ylabel(r'$L_D$')
     # plt.yticks([0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50])
     plt.xticks([1,2,3,4,5,6,7,8])
     
@@ -2219,9 +2303,7 @@ def plot_cut_offs(plots, ts, ani):
 
                     plt.tight_layout()
 
-                    plt.show()
-                
-
+                    plt.show()             
         
 def plot_logarithms(plots, ts, ani):
     
@@ -2407,11 +2489,11 @@ def plot_data_with_fitted_functions(plots, ani, thickness):
                             # If we get runtime error then there is no harmonic wave, just exponential decay
                             except RuntimeError:
                                 params, params_cov = curve_fit(h, fit_xs, fit_ys2, p0=[1e12, 2])
-                                plt.plot(original_xs, np.array(original_ys)/1e11, color='tab:blue')
-                                plt.plot(fit_xs, np.array(h(fit_xs, *params))/1e11, color='tab:orange')
+                                plt.plot(original_xs+3.02, np.array(original_ys)/1e11, color='tab:blue')
+                                plt.plot(fit_xs+3.02, np.array(h(fit_xs, *params))/1e11, color='tab:orange')
                             else:
-                                plt.plot(original_xs, np.array(original_ys)/1e11, color="#e76f8a", linewidth=2, marker='s', markevery=[0, 2, 5, 8, 13, 20, 27, 37, 42, 48,58])
-                                plt.plot(fit_xs, np.array(g(fit_xs, *params))/1e11, color="#4575b4", linewidth=2)
+                                plt.plot(original_xs+3.02, np.array(original_ys)/1e11, color="#e76f8a", linewidth=2, marker='s', markevery=[0, 2, 5, 8, 13, 20, 27, 37, 42, 48,58])
+                                plt.plot(fit_xs+3.02, np.array(g(fit_xs, *params))/1e11, color="#4575b4", linewidth=2)
                             plt.xlabel(r'x (μm)')
                             plt.ylabel(r'$\mu$')
                             plt.legend(['Measured data', 'Fitted function'])
@@ -2421,8 +2503,8 @@ def plot_data_with_fitted_functions(plots, ani, thickness):
                             
                     # if k == 2:
                     #     params, params_cov = curve_fit(f, fit_xs, fit_ys)
-                    #     plt.plot(xs, np.array(plot_ys), color="#e76f8a", linewidth=2, marker='s', markevery=range(0, 310,30))
-                    #     plt.plot(fit_xs, np.array(f(fit_xs, params[0], params[1])), color="#4575b4", linewidth=2)
+                    #     plt.plot(xs+3.02, np.array(plot_ys), color="#e76f8a", linewidth=2, marker='s', markevery=range(0, 310,30))
+                    #     plt.plot(fit_xs+3.02, np.array(f(fit_xs, params[0], params[1])), color="#4575b4", linewidth=2)
                     #     plt.xlabel(r'x (μm)')
                     #     plt.ylabel(r'ln($\mu$)')
                     #     plt.legend(['Measured data', 'Fitted function'])
@@ -2430,7 +2512,6 @@ def plot_data_with_fitted_functions(plots, ani, thickness):
                     #     plt.savefig('AFM/custom/plots/function_fit_uniaxial_2layer_constJc_over_d.png', dpi=500)
                     #     plt.show()
                                    
-
 def plot_current_density(meshdims, cellsize, t, V, damping, MEC, ani, T, type):
 
     plt.figure(figsize=(10, 7))
@@ -2714,19 +2795,20 @@ def plot_uniaxial_analytical_dispersion():
     A = 76e-15 # J/m
     a = 5e-9 # m
     hbar = 1.0546e-34 # m^2 kg/s
-    gamma_e = 2.802e9 # s^-1 T^-1
+    gamma_e_over_pi = 2.802e9 # s^-1 T^-1
     Ms = 2.1e3 # A/m
-    C = hbar*gamma_e/Ms
+    C = gamma_e_over_pi/(Ms)
     
     # Define the dispersion relation
     def E(q, D):
         return C*np.sqrt(16*np.abs(Ah)*K_easy + 4*A*D/a**2 * q**2)
     
-    x = np.linspace(-1000,1000, 100)
+    x = np.linspace(-2,2, 1000)/5e-9
     
     plt.plot(x, E(x,2))
     plt.plot(x, E(x,3))
     
+    plt.tight_layout()
     plt.show()
 
 def main():
@@ -2763,7 +2845,7 @@ def main():
 
         plot_tAvg_comparison(fs, ts, savename, 'IP')
 
-    # thickness_comparison(1, -0.06)
+    thickness_comparison(1, -0.06)
 
     ### DISPERSIONS ###
 
@@ -2818,7 +2900,7 @@ def main():
         # plot_cut_offs(fs, thicknesses, 'IP')
         plot_data_with_fitted_functions(fs, 'IP', 0)
     
-    const_Jc_over_d()
+    # const_Jc_over_d()
     
     ### Across voltages ###
     
@@ -2889,7 +2971,7 @@ def main():
         
         plot_diffusion_length_both_systems(fs1, fs2, ts, savename_both, 'IP', thickness)
     
-    # both_systems_across_voltages(20)
+    # both_systems_across_voltages(40)
     
     ### All systems across voltages ###
     
