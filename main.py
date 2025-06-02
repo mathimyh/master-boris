@@ -16,13 +16,13 @@ def main():
     # Dimensions (nm)
     Lx = 4000
     Ly = 50
-    Lz = 40
+    Lz = 75
     cellsize = 5
     meshdims = (Lx, Ly, Lz)
 
     # Parameters
     t = 1000 # ps
-    V = -0.480 # mV
+    V = -2.175 # mV
     damping = 4e-4 
     MEC = 0
     ani = 'IP'
@@ -41,12 +41,10 @@ def main():
 
     steadystate = params.Steadystate(**common_params, x_vals=x_vals)
     
-    timeAvgSA = params.TimeAvgSA(**common_params, x_start=Lx/2 + 20, x_stop=Lx)
-    
-    timeAvgSAz = params.TimeAvgSAz(**common_params, x_start=0, x_stop=Lz)
+    timeAvgSA = params.TimeAvgSA(**common_params, x_start=Lx/2 + 20, x_stop=Lx, direction='z')
     
     magnonDispersion = params.MagnonDispersion(**common_params, component='y', axis='x', 
-                                               steadystate=1, triple=1)
+                                               steadystate=0, triple=1)
     
     magnonDispersionSinc = params.MagnonDispersionSinc(**common_params, component='y', axis='x')
     
@@ -74,7 +72,7 @@ def main():
     # # transport.time_avg_SA(meshdims, cellsize,t,V, damping, MEC, ani, T, type, hard_axis, 520, 1000)
     # for timeavg in timeavgs:
         # plotting.plot_tAvg_SA(timeavg)
-    # plotting.fft_transport_underneath(*params)s
+    plotting.plot_tAvg_SA_both_systems(timeAvgSA)
     # transport.save_steadystate(ns, steadystate)
     # transport.time_avg_SA(ns, timeAvgSA)
     # plotting.plot_plateau(steadystate)
@@ -86,10 +84,10 @@ def main():
     # plotting.plot_magnon_dispersion_overlay(magnonDispersion, clim_max=10000)
     # transport.current_density(*params)
     # plotting.plot_critical_T(criticalT)
-    # plotting.plot_magnon_dispersion_triple(magnonDispersion, zoom=1, clim_max=2000)
+    # plotting.plot_magnon_dispersion_triple(magnonDispersion, zoom=1, clim_max=1500)
     # plotting.plot_magnon_dispersion_separate(magnonDispersion, 4000)
-    plotting.plot_tAvg_SA_z(timeAvgSAz)
-    # plotting.plot_magnon_dispersion(magnonDispersion, zoom=1)
+    # plotting.plot_tAvg_SA(timeAvgSA)
+    # plotting.plot_magnon_dispersion(magnonDispersion, zoom=0)
 
     ### Parallel computing needs this enabled ###
     # nsm = NSMultiClient(scriptserverports = range(1000,1002), cudaDevices = range(0,2))
@@ -150,6 +148,25 @@ def main():
 
     # nsm.Run(transport.save_steadystate, steadyStates)
     # nsm.Run(transport.time_avg_SA, timeAvgSAs)
+
+    # factor = 20/20
+    # Vs1 = np.linspace(0.200, 0.575, 6)
+    # Vs2 = np.linspace(0.175,0.550, 6)
+    # Vs = np.concatenate((Vs1, Vs2))
+
+    # for i in range(9):
+    #     timeAvgSAs = []
+    #     steadyStates = []
+    #     for v in Vs:
+    #         temp1 = params.Steadystate([6000,50,20], cellsize, 200, -v*factor, damping,
+    #                                 MEC, ani, T, type, hard_axis, Hfield)
+    #         temp2 = params.TimeAvgSA([6000,50,20], cellsize, 100, -v*factor, damping,
+    #                                 MEC, ani, T, type, hard_axis, Hfield, x_start=3020, x_stop=6000)
+    #         steadyStates.append(temp1)
+    #         timeAvgSAs.append(temp2)
+            
+    #     for elem in timeAvgSAs:
+    #         plotting.plot_tAvg_SA(elem, sim_num=i+1)
 
 if __name__ == '__main__':
     main()

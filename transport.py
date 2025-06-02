@@ -415,7 +415,7 @@ def time_avg_SA(ns, timeAvgSA,sim_num=False):
             ns.adddata('<mxdmdt>', timeAvgSA.type, temp)
     
     elif timeAvgSA.direction == 'z':
-        for i in range(int((timeAvgSA.meshdims[2]/timeAvgSA.cellsize))-1):
+        for i in range(int(timeAvgSA.meshdims[2]/timeAvgSA.cellsize)):
             # Measure through middle of sample
             temp = np.array([timeAvgSA.meshdims[0]/2, 0, timeAvgSA.cellsize*i, 
                              timeAvgSA.meshdims[0]/2, timeAvgSA.meshdims[1], 
@@ -424,7 +424,7 @@ def time_avg_SA(ns, timeAvgSA,sim_num=False):
             
     elif timeAvgSA.direction == 'y':
         # Only measure at the top
-        for i in range(int((timeAvgSA.meshdims[1]/timeAvgSA.cellsize))-1):
+        for i in range(int(timeAvgSA.meshdims[1]/timeAvgSA.cellsize)):
             temp = np.array([timeAvgSA.meshdims[0]/2, timeAvgSA.cellsize*i, timeAvgSA.meshdims[2],
                              timeAvgSA.meshdims[0]/2], timeAvgSA.cellsize*(i+1), 
                             timeAvgSA.meshdims[2])

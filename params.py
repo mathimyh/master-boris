@@ -45,9 +45,9 @@ class Params:
     
 class TimeAvgSA(Params):
 
-    def __init__(self, meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, Hfield, direction, x_start, x_stop):
+    def __init__(self, meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, Hfield, x_start, x_stop, direction = 'x'):
         super().__init__(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, Hfield)
-        self.dir = direction
+        self.direction = direction
         self.x_start = x_start
         self.x_stop = x_stop
         
@@ -63,6 +63,20 @@ class TimeAvgSA(Params):
     
     def plotname(self):
         return self.type + '/' + self.modules_folder + self.ani + '/plots/' + 't_avg/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) + '/' + self.dir_str + 'tAvg_damping' + str(self.damping) + f"_V{self.V:.3f}" + '_' + str(self.T) + 'K.png'
+
+    def set_hard_axis(self, axis_bool, hfield):
+        self.hard_axis = axis_bool
+        self.Hfield = hfield
+        self.modules_folder = 'ex+ani'
+        if self.MEC:
+            self.modules_folder += '+mec'
+        if self.hard_axis:
+            self.modules_folder += '+hard_axis'
+        self.H_string = ''
+        if self.Hfield != 0.:
+            self.modules_folder += '+Hfield'
+            self.H_string += '_H' + str(round(self.Hfield,1))   
+        self.modules_folder += '/'
 
 class Steadystate(Params):
 
