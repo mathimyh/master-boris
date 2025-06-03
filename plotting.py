@@ -178,14 +178,14 @@ def plot_tAvg_SA(timeAvgSA, sim_num=False):
         if not sim_num:
             plotname = timeAvgSA.plotname()
         else:
-            plotname = timeAvgSA.plotname()
+            plotname = timeAvgSA.plotname()[:-4]
             plotname += '_sim' + str(sim_num) + '.png'
         params.make_folder(plotname)
         plt.savefig(plotname, dpi=500)
         
-        # plt.show()
+        plt.show()
         
-        plt.close()
+        # plt.close()
  
 def plot_tAvg_SA_both_systems(timeAvgSA, sim_num=False):
 
@@ -323,13 +323,13 @@ def plot_tAvg_SA_both_systems(timeAvgSA, sim_num=False):
         if timeAvgSA.direction == 'x':
             xs = np.linspace(timeAvgSA.x_start/1000, timeAvgSA.x_stop/1000, len(ys))
             plt.xlabel('x (μm)')
-            plt.plot(xs, np.array(ys)/1e11, linewidth=3, color=color)#, linestyle=(0, (5, 10)))
+            plt.plot(xs, np.array(ys)/1e11, linewidth=3, color=color, linestyle=(0, (5, 10)))
         
         elif timeAvgSA.direction == 'z':
             xs = np.linspace(timeAvgSA.cellsize/2, timeAvgSA.meshdims[2]-timeAvgSA.cellsize/2, len(ys))
             plt.xlabel('z (nm)')
             plt.plot(xs, np.array(ys)/1e11, linewidth=2, color=color, marker='v', markersize=10)
-            ticks = np.linspace(0, timeAvgSA.meshdims[2], int(timeAvgSA.meshdims[2]/15)+1)
+            ticks = np.linspace(0, timeAvgSA.meshdims[2], int(timeAvgSA.meshdims[2]/10)+1)
             plt.xticks(ticks)
             
         elif timeAvgSA.direction == 'y':
@@ -1160,12 +1160,75 @@ def plot_tAvg_comparison_thick(plots, legends, savename, ani):
 
 #### MAGNON DISPERSION PLOTS ####
 
-def plot_magnon_dispersion(magnonDispersion, zoom, clim_max = 1000):
+def plot_analytical_AFM_uni(ax):
+    
+    '''
+    
+    Plot the analytical dispersion relation for uniaxial anisotropy on a given axis. 
+    Used for plotting on top of numerically found dispersions
+    
+    '''
+    
+    # Define the constants
+    Ah = -460e3 # J/m^3
+    K_easy = 21 # J/m^3
+    A = 76e-15 # J/m
+    a = 5e-9 # m
+    hbar = 1.0546e-34 # m^2 kg/s
+    gamma_e_over_2pi = 2.802e10 # s^-1 T^-1
+    Ms = 2.1e3 # A/m
+    C = gamma_e_over_2pi/(Ms)
+    
+    # Define the dispersion relation
+    def f(q_a):
+        q = q_a / 5e-9
+        return np.sqrt(C**2 * 16 * np.abs(Ah)*K_easy + 16*A*np.abs(Ah)*q**2*C**2)/1e12
+    
+    x = np.linspace(-0.75, 0.75, 1000)
+    
+    ax.plot(x, f(x), color='red', linestyle='dashed', linewidth=2.5)
+    
+def plot_analytical_AFM_bi(axes):
+    
+    '''
+    
+    Plot the analytical dispersion relation for biaxial anisotropy on two given axes. 
+    Used for plotting on top of numerically found dispersions
+    
+    '''
+    
+    # Define the constants
+    Ah = 460e3 # J/m^3
+    K_hard = 21
+    K_easy = 21e-3 # J/m^3
+    A = 76e-15 # J/m
+    a = 5e-9 # m
+    hbar = 1.0546e-34 # m^2 kg/s
+    gamma_e_over_2pi = 2.802e10 # s^-1 T^-1
+    Ms = 2.1e3 # A/m
+    C = gamma_e_over_2pi/(Ms)
+    
+    # Define the dispersion relations
+    def high(q_a):
+        q = q_a / 5e-9
+        return C*np.sqrt(16*A*Ah*q**2 + 16*Ah*(K_easy+K_hard))/1e12
+    
+    def low(q_a):
+        q = q_a /5e-9
+        return C*np.sqrt(16*A*Ah*q**2 + 16*Ah*K_easy)/1e12
+    
+    x = np.linspace(-0.75, 0.75, 1000)
+    
+    axes[0].plot(x, low(x), color='red', linestyle = 'dashed', linewidth=2.5)
+    axes[1].plot(x, high(x), color='red', linestyle = 'dashed', linewidth=2.5)
+    
+def plot_magnon_dispersion(magnonDispersion, zoom, clim_max = 1000, analytical=False, sim_num=False):
 
     '''
     
-    Plot the magnon dispersion of a given system, including a zoom-in on an area, usually
-    the gap. In the case of easy-plane, y and z components are superimposed on the same plot
+    Plot the magnon dispersion of a given system, including a zoom-in on an area if given
+    In the case of easy-plane plot the two bands in separate subplots (NOTE: Maybe change?)
+    Can plot the analytical solutions on top if analytical == True
     
     '''
 
@@ -1183,17 +1246,35 @@ def plot_magnon_dispersion(magnonDispersion, zoom, clim_max = 1000):
     
     
     output_files = magnonDispersion.cachename()
-    savename = magnonDispersion.plotname()
+    if not sim_num:
+        output_files = magnonDispersion.cachename()
+    else:
+       raw_output_files = magnonDispersion.cachename()
+       output_files = []
+       for output_file in raw_output_files:
+            temp = output_file[:-4]
+            temp += '_sim' + str(sim_num) + '.txt' 
+            output_files.append(temp) 
+            
+            
+    if not sim_num:
+        savename = magnonDispersion.plotname()
+    else:
+        savename = magnonDispersion.plotname()[:-4]
+        savename += '_sim' + str(sim_num) + '.png'
+    
     params.make_folder(savename)
 
     if magnonDispersion.hard_axis:
         fig1,ax1 = plt.subplots(1,2)
-        fig1.set_figheight(7)
-        fig1.set_figwidth(16)
+        fig1.set_figheight(6)
+        fig1.set_figwidth(14)
     else:
         fig1,ax1 = plt.subplots()
 
     titles = ['y-component', 'z-component']
+    
+    axes_list = []
 
     for i, output_file in enumerate(output_files):
 
@@ -1221,15 +1302,27 @@ def plot_magnon_dispersion(magnonDispersion, zoom, clim_max = 1000):
             ax1[i].set_ylabel(ylabel)
 
             if zoom:
-                x1, x2, y1, y2 = -0.15, 0.15, 0, 0.3
+                x1, x2, y1, y2 = -0.3, 0.3, 0, 0.4
                 axins = ax1[i].inset_axes(
-                    [0.5, 0.5, 0.47, 0.47],
+                    [0.4, 0.52, 0.6, 0.4],
                     xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
-                axins.imshow(final_result, extent = [-k_max, k_max,f_min, f_max], origin='lower')
-
-                ax1[i].indicate_inset_zoom(axins, edgecolor='black')
-
+                if i == 0:
+                    axins.imshow(final_result, extent = [-k_max, k_max,f_min, f_max], origin='lower', clim=(0,20000))
+                else:
+                    axins.imshow(final_result, extent = [-k_max, k_max,f_min, f_max], origin='lower')
+                
+                ax1[i].indicate_inset_zoom(axins, edgecolor='white', alpha=1)
+            
+                for spine in axins.spines.values():
+                    spine.set_edgecolor('white')
+                    
+                axins.tick_params(colors='white')
+                axins.set_yticks([0.0, 0.2, 0.4])
+                
                 ax1[i].title.set_text(titles[i])
+                
+                if analytical:
+                    axes_list.append(axins)
 
         else:
             ax1.imshow(final_result, origin='lower', interpolation='bilinear', extent = [-k_max, k_max,f_min, f_max], aspect ="auto", clim=(0, clim_max))
@@ -1243,6 +1336,7 @@ def plot_magnon_dispersion(magnonDispersion, zoom, clim_max = 1000):
                     xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
                 axins.imshow(final_result, extent = [-k_max, k_max,f_min, f_max], origin='lower', clim=(0,5000))
                 axins.set_yticks([0.0, 0.2, 0.4])
+                # axins.set_yticks([0.0, 0.3, 0.6])
 
                 ax1.indicate_inset_zoom(axins, edgecolor='white', alpha=1)
             
@@ -1250,35 +1344,22 @@ def plot_magnon_dispersion(magnonDispersion, zoom, clim_max = 1000):
                     spine.set_edgecolor('white')
                     
                 axins.tick_params(colors='white')
-        # ax1.set_ylim(0, 0.1)
-        
-    # Define the constants
-    Ah = -460e3 # J/m^3
-    K_easy = 21 # J/m^3
-    A = 76e-15 # J/m
-    a = 5e-9 # m
-    hbar = 1.0546e-34 # m^2 kg/s
-    gamma_e_over_2pi = 2.802e10 # s^-1 T^-1
-    Ms = 2.1e3 # A/m
-    C = gamma_e_over_2pi/(Ms)
-    
-    # Define the dispersion relation
-    def f(q_a):
-        q = q_a / 5e-9
-        return np.sqrt(C**2 * 16 * np.abs(Ah)*K_easy + 16*A*np.abs(Ah)*q**2*C**2)/1e12
-    
-    x = np.linspace(-2, 2, 1000)
-    
-    plt.plot(x, f(x))
-    plt.plot(x, f(x))
+                
+                if analytical:
+                    plot_analytical_AFM_uni(axins)
 
+        # ax1.set_ylim(0, 0.1)
+    
+    if analytical and magnonDispersion.hard_axis:
+        plot_analytical_AFM_bi(axes_list)
+    
     plt.tight_layout()
 
     plt.savefig(savename, dpi=500)
 
     plt.show()
 
-def plot_magnon_dispersion_separate(magnonDispersion, clim_max = 1000):
+def plot_magnon_dispersion_separate(magnonDispersion, clim_max = 1000, analytical=False):
 
     '''
     
@@ -1295,6 +1376,8 @@ def plot_magnon_dispersion_separate(magnonDispersion, clim_max = 1000):
         time_step = 1e-12
         ylabel = 'f (GHz)'
         divisor = 1e9
+        
+    axins_list = []
 
     if magnonDispersion.triple:
         output_files = magnonDispersion.cachename()
@@ -1350,7 +1433,7 @@ def plot_magnon_dispersion_separate(magnonDispersion, clim_max = 1000):
         
         fig, ax = plt.subplots(1,2)
 
-        fig.set_figheight(6)
+        fig.set_figheight(5)
         fig.set_figwidth(12)
         yvals =[5,25,45]
         
@@ -1394,8 +1477,14 @@ def plot_magnon_dispersion_separate(magnonDispersion, clim_max = 1000):
                 
             axins.tick_params(colors='white')
             
+            if analytical:
+                axins_list.append(axins)
 
+        if analytical and magnonDispersion.hard_axis:
+            plot_analytical_AFM_bi(axins_list)
+        
         plt.tight_layout()
+        
     
     
     else:
@@ -1894,7 +1983,7 @@ def plot_dispersions(plots, savename):
     fig.set_figheight(5)
     fig.set_figwidth(14)
 
-    annotations = ['a', 'b', 'c', 'd']
+    annotations = [r'$\frac{|V|}{L_z} = 19μV$ $nm^{-1}$', r'$\frac{|V|}{L_z} = 30.0μV$ $nm^{-1}$']
     # titles = ['1 layer', '50 layers', '100 layers', '150 layers', '150 layers \n + damping layer']
     # titles = ['T = 0.3K', 'T = 0.8K', 'T = 3.0K']
 
@@ -1925,7 +2014,7 @@ def plot_dispersions(plots, savename):
         # if i == 0:
         #     clim_max = 1000
 
-        label = 'qy'
+        label = r'$q_x a$'
 
         x1, x2, y1, y2 = -0.25, 0.25, 0, 0.5
         axins = ax.inset_axes(
@@ -1936,14 +2025,14 @@ def plot_dispersions(plots, savename):
         axins.imshow(result, extent = [-k_max, k_max,f_min, f_max], origin='lower')
         ax.indicate_inset_zoom(axins, edgecolor='black')
 
-        # ax.annotate(annotations[i], (0.05, 0.85), xycoords = 'axes fraction', color='white', fontsize=32)
+        ax.annotate(annotations[i], (0.05, 0.85), xycoords = 'axes fraction', color='white', fontsize=32)
 
         # if i == 0:
         #     ax.title.set_text('Without MEC')
         # elif i == 1:
         #     ax.title.set_text('With MEC')
 
-        ax.title.set_text(titles[i])
+        # ax.title.set_text(titles[i])
         # ax.set_xticks([-2,2])
         ax.set_xlabel(label)
         if i == 0:
@@ -2196,7 +2285,7 @@ def plot_diffusion_length_both_systems(plots1, plots2, ts, savename, ani, thickn
 
 
     ensembles = 1
-    if thickness == 20:
+    if thickness == 20 or thickness == 40:
         ensembles = 9
     
     # Loop over biaxial and uniaxial
@@ -2222,7 +2311,7 @@ def plot_diffusion_length_both_systems(plots1, plots2, ts, savename, ani, thickn
                 try:
                     f = open(plot, 'r')
                 except:
-                    failed = True
+                    print('No file found', plot)
                 else:
                     plat = plot.split('/')[-1]
                     temps = plat.split('_')
@@ -2315,23 +2404,27 @@ def plot_diffusion_length_both_systems(plots1, plots2, ts, savename, ani, thickn
                                 # If we get runtime error then there is no harmonic wave, just exponential decay
                                 except RuntimeError:
                                     params, params_cov = curve_fit(h, fit_xs, lin_fit_ys, p0=[1e12, 2])
-                                    if 1/params[1] < 2:
+                                    if 1/params[1] < 2 and (ensembles == 1 or m == 1):
                                         plt.plot(1e3*ts[k]/thickness, 1/params[1], marker=markers[m], markersize = 10, color=colors[m])
+                                    else:
+                                        results.append(1/params[1])
                                 else:
-                                    plt.plot(1e3*ts[k]/thickness, 1/params[1], marker=markers[m], markersize = 10, color=colors[m])
-                                
+                                    if ensembles == 1 or m == 1:
+                                        plt.plot(1e3*ts[k]/thickness, 1/params[1], marker=markers[m], markersize = 10, color=colors[m])
+                                    else:
+                                        results.append(1/params[1])
                             else:
                                 params, params_cov = curve_fit(f, fit_xs, lin_fit_ys)
                                 if ensembles == 1:
                                     plt.plot(1e3*ts[k]/thickness, 1/params[1], marker=markers[m], markersize = 10, color=colors[m])
                                 else:
                                     results.append(1/params[1])
-            if ensembles != 1 and not failed:
+            if ensembles != 1:
                 array = np.array(results)
                 standard_deviation = np.std(array)
                 average = np.average(array)
-                
-                plt.errorbar([1e3*ts[k]/thickness], average, yerr=standard_deviation, marker=markers[m], markersize=10, color=colors[m], capsize=3)
+                if average < 1: 
+                    plt.errorbar([1e3*ts[k]/thickness], average, yerr=standard_deviation, marker=markers[m], markersize=10, color=colors[m], capsize=3)
             
     plt.xlabel(r'Voltage/thickness (μV/nm)')
     plt.ylabel(r'$L_D (μm)$')
@@ -3210,7 +3303,7 @@ def plot_uniaxial_analytical_dispersion():
 def main():
 
 
-    plot_uniaxial_analytical_dispersion()
+    # plot_uniaxial_analytical_dispersion()
 
     #### MAGNON TRANSPORT ### 
 
@@ -3287,6 +3380,8 @@ def main():
         plot_dispersion_field_comparisons(plots, c_max1, c_max2)
         
     # magnetic_field_comparison()
+
+    # f1 = ''
 
     ### DIFFUSION LENGTHS ###
     
@@ -3370,14 +3465,16 @@ def main():
         if easy_plane:
             easy_plane_string = '+hard_axis+Hfield'
             
-        Vs1 = np.linspace(0.200, 0.575, 6)
-        Vs2 = np.linspace(0.175,0.550, 6)
-        Vs = np.concatenate((Vs1, Vs2))
+        # Vs1 = np.linspace(0.200, 0.575, 6)
+        # Vs2 = np.linspace(0.175,0.550, 6)
+        # Vs = np.concatenate((Vs1, Vs2))
+        Vs = [0.175, 0.200, 0.250, 0.275, 0.325, 0.350, 0.400, 0.425, 0.475, 0.500, 0.550, 0.575]
             
         for i in Vs:
             voltage = (i)
-            ts.append(round(voltage*factor,3))
-            plotname = 'AFM/ex+ani' + easy_plane_string + f'/IP/cache/t_avg/{length}x50x{thickness}/tAvg_damping0.0004_V-{round(voltage*factor,3):.3f}_0.3K.txt'
+            # ts.append(round(voltage*factor,3))
+            ts.append(factor*voltage)
+            plotname = 'AFM/ex+ani' + easy_plane_string + f'/IP/cache/t_avg/{length}x50x{thickness}/tAvg_damping0.0004_V-{round(factor*voltage,3):.3f}_0.3K.txt'
             fs1.append(plotname)
         
         easy_plane = 1
@@ -3396,7 +3493,7 @@ def main():
         
         plot_diffusion_length_both_systems(fs1, fs2, ts, savename_both, 'IP', thickness)
     
-    # both_systems_across_voltages(20)
+    both_systems_across_voltages(40)
     
     ### All systems across voltages ###
     
