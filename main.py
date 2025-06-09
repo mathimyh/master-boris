@@ -14,15 +14,15 @@ sys.path.insert(0, 'C:/Users/matmy/OneDrive/Documents/Boris Data/BorisPythonScri
 def main():
     
     # Dimensions (nm)
-    Lx = 4000
+    Lx = 6000
     Ly = 50
-    Lz = 50
+    Lz = 10
     cellsize = 5
     meshdims = (Lx, Ly, Lz)
 
     # Parameters
     t = 1000 # ps
-    V = -1.45 # mV
+    V = -0.12 # mV
     damping = 4e-4 
     MEC = 0
     ani = 'IP'
@@ -70,15 +70,16 @@ def main():
 
     # for timeavg in timeavgs:
         # plotting.plot_tAvg_SA(timeavg)
-    plotting.plot_tAvg_SA_both_systems(timeAvgSA)
+    # plotting.plot_tAvg_SA_both_systems(timeAvgSA)
     # plotting.plot_magnon_dispersion(magnonDispersion, zoom=0, clim_max=1000, analytical = 0, sim_num=0)
     # plotting.plot_magnon_dispersion_overlay(magnonDispersion, clim_max=10000)
     # plotting.plot_critical_T(criticalT)
     # plotting.plot_magnon_dispersion_triple(magnonDispersion, zoom=0, clim_max=1500)
-    # plotting.plot_magnon_dispersion_double(magnonDispersion, zoom=0)
+    # plotting.plot_magnon_dispersion_double(magnonDispersion, zoom=0, sim_num=9)
     # plotting.plot_magnon_dispersion_separate(magnonDispersion, analytical=1)
-    # plotting.plot_tAvg_SA(timeAvgSA)
-    # plotting.plot_magnon_dispersion(magnonDispersion)
+    plotting.plot_tAvg_SA(timeAvgSA)
+    # plotting.plot_magnon_dispersion(magnonDispersion,zoom=0)
+    # plotting.plot_uniaxial_analytical_dispersion_width_modes(magnonDispersion)
 
     ### Parallel computing needs this enabled ###
     # nsm = NSMultiClient(scriptserverports = range(1000,1002), cudaDevices = range(0,2))
@@ -140,18 +141,19 @@ def main():
     # nsm.Run(transport.save_steadystate, steadyStates)
     # nsm.Run(transport.time_avg_SA, timeAvgSAs)
 
-    # factor = 40/20
+    factor = 10/20
     # Vs1 = np.linspace(0.200, 0.575, 6)
     # Vs2 = np.linspace(0.175,0.550, 6)
     # Vs = np.concatenate((Vs1, Vs2))
+    # Vs = [0.175, 0.200, 0.250, 0.275, 0.325, 0.350, 0.400, 0.425, 0.475, 0.500, 0.550, 0.575]
 
     # for i in range(9):
     #     timeAvgSAs = []
     #     steadyStates = []
     #     for v in Vs:
-    #         temp1 = params.Steadystate([4000,50,40], cellsize, 200, -v*factor, damping,
+    #         temp1 = params.Steadystate([6000,50,10], cellsize, 200, -v*factor, damping,
     #                                 MEC, ani, T, type, hard_axis, Hfield)
-    #         temp2 = params.TimeAvgSA([4000,50,40], cellsize, 100, -v*factor, damping,
+    #         temp2 = params.TimeAvgSA([6000,50,10], cellsize, 100, -v*factor, damping,
     #                                 MEC, ani, T, type, hard_axis, Hfield, x_start=2020, x_stop=4000)
     #         steadyStates.append(temp1)
     #         timeAvgSAs.append(temp2)
