@@ -897,7 +897,6 @@ def plot_tAvg_comparison(plots, legends, savename, ani):
     # colors = get_lab_ramp(green_color, N)
     # colors = generate_hue_variants(green_color, N)
     
-    factor = 1
     
     x0 = 0.5
     y0 = 0.3
@@ -975,25 +974,25 @@ def plot_tAvg_comparison(plots, legends, savename, ani):
         # plt.plot(xs, ys, label=str(leg), linewidth=3, color=colors[k])
         
         
-        if k + factor == 4:
+        if k == 4:
             x1, x2, y1, y2 = 3.1 , 3.43, 0.0 , 0.33
             axins = ax.inset_axes(
                 [x0, y0+dy, w, h],
                 xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
             
-        elif k + factor == 5:
+        elif k == 5:
             x1, x2, y1, y2 = 3.1 , 3.43, 0.0 , 0.33
             axins = ax.inset_axes(
                 [x0+dx, y0+dy, w, h],
                 xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
             
-        elif k + factor== 6:
+        elif k == 6:
             x1, x2, y1, y2 = 3.1 , 3.43, 0.0 , 0.33
             axins = ax.inset_axes(
                 [x0, y0, w, h],
                 xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
             
-        elif k + factor == 7:
+        elif k == 7:
             x1, x2, y1, y2 = 3.1 , 3.43, 0.0 , 0.33
             axins = ax.inset_axes(
                 [x0+dx, y0, w, h],
@@ -1223,6 +1222,34 @@ def plot_analytical_AFM_bi(axes):
     axes[0].plot(x, low(x), color='red', linestyle = 'dashed', linewidth=2.5)
     axes[1].plot(x, high(x), color='red', linestyle = 'dashed', linewidth=2.5)
     
+def plot_analytical_FM_uni(ax):
+    
+    '''
+    
+    Plot the FM analytical dispersion relation for uniaxial anisotropy on a given axis. 
+    Used for plotting on top of numerically found dispersions
+    
+    '''
+    
+    # Define the constants
+    Ah = -460e3 # J/m^3
+    K_easy = 2100 # J/m^3
+    A = 76e-15 # J/m
+    a = 5e-9 # m
+    hbar = 1.0546e-34 # m^2 kg/s
+    gamma_e_over_2pi = 2.802e10 # s^-1 T^-1
+    Ms = 2.1e3 # A/m
+    C = gamma_e_over_2pi/(Ms)
+    
+    # Define the dispersion relation
+    def f(q_a):
+        q = q_a / 5e-9
+        return C * (2*A*q**2 + 2*K_easy) / 1e9
+    
+    x = np.linspace(-0.75, 0.75, 1000)
+    
+    ax.plot(x, f(x), color='red', linestyle='dashed', linewidth=2.5)
+
 def plot_magnon_dispersion(magnonDispersion, zoom, clim_max = 1000, analytical=False, sim_num=False):
 
     '''
@@ -1331,7 +1358,7 @@ def plot_magnon_dispersion(magnonDispersion, zoom, clim_max = 1000, analytical=F
             ax1.set_ylabel(ylabel)
 
             if zoom:
-                x1, x2, y1, y2 = -0.3, 0.3, 0, 0.4
+                x1, x2, y1, y2 = -0.3, 0.3, 30, 0.4
                 axins = ax1.inset_axes(
                     [0.4, 0.52, 0.6, 0.4],
                     xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
@@ -1346,8 +1373,11 @@ def plot_magnon_dispersion(magnonDispersion, zoom, clim_max = 1000, analytical=F
                     
                 axins.tick_params(colors='white')
                 
-                if analytical:
+                if analytical and magnonDispersion.type == 'AFM':
                     plot_analytical_AFM_uni(axins)
+            if analytical and magnonDispersion.type == 'FM':
+                plot_analytical_FM_uni(ax1)
+                plt.xlim(-2,2)
 
         # ax1.set_ylim(0, 0.1)
     
@@ -2148,8 +2178,8 @@ def plot_critical_T(criticalT):
 
     savename = criticalT.plotname()
     params.make_folder(savename)
-    plt.xlabel(r'Temperature ($K$)')
-    plt.ylabel(r'|${m}_{x}$|')
+    plt.xlabel(r'Temperature (K)')
+    plt.ylabel(r'|${{m}}_{x}$|')
     plt.tight_layout()
     plt.savefig(savename, dpi=500)
     plt.show()
@@ -2669,7 +2699,7 @@ def plot_diffusion_length_across_thicknesses(plots, ts, savename, ani):
                             print(1/params[5])
                             plt.plot(ts[k]/5, 1/params[1], marker=marker, markersize = 10, color=color)
                             
-                    elif k != 9:
+                    else:
                         params, params_cov = curve_fit(f, fit_xs, lin_fit_ys)
                         plt.plot(ts[k]/5, 1/params[1], marker=marker, markersize = 10, color=color)
 
@@ -3432,9 +3462,8 @@ def main():
         for i in range(1, 9):
             # Have to make an exception here because the biaxial system at thickness=10nm and V=-0.12 flips and
             # can not be included
-            if V0*i != -0.12 or not hard_axis: 
-                Vs.append(V0*i)
-                ts.append(i)
+            Vs.append(V0*i)
+            ts.append(i)
             
         hard_axis_str = ''
         system = 'uniaxial'
@@ -3451,7 +3480,7 @@ def main():
 
         plot_tAvg_comparison(fs, ts, savename, 'IP')
 
-    # thickness_comparison(1, -0.06)
+    thickness_comparison(1, -0.06)
     
     ### VERY thick meshes
     
@@ -3532,7 +3561,7 @@ def main():
         # plot_cut_offs(fs, thicknesses, 'IP')
         # plot_data_with_fitted_functions(fs, 'IP', 0)
     
-    # const_Jc_over_d()
+    const_Jc_over_d()
     
     ### Across voltages ###
     
@@ -3611,7 +3640,7 @@ def main():
         
         plot_diffusion_length_both_systems(fs1, fs2, ts, savename_both, 'IP', thickness)
     
-    both_systems_across_voltages(10)
+    # both_systems_across_voltages(10)
     
     ### All systems across voltages ###
     

@@ -134,7 +134,7 @@ def Init_FM(ns, params):
     FM.param.A = 76e-15 # J/m
     FM.param.J1 = 0
     FM.param.J2 = 0
-    FM.param.K1 = 21 # J/m^3
+    FM.param.K1 = 2100 # J/m^3
     FM.param.K2 = 0
     FM.param.K3 = 0
     FM.param.cHa = 1

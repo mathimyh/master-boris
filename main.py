@@ -15,14 +15,14 @@ def main():
     
     # Dimensions (nm)
     Lx = 6000
-    Ly = 50
+    Ly = 100
     Lz = 10
     cellsize = 5
     meshdims = (Lx, Ly, Lz)
 
     # Parameters
     t = 1000 # ps
-    V = -0.12 # mV
+    V = -0.24 # mV
     damping = 4e-4 
     MEC = 0
     ani = 'IP'
@@ -41,10 +41,10 @@ def main():
 
     steadystate = params.Steadystate(**common_params, x_vals=x_vals)
     
-    timeAvgSA = params.TimeAvgSA(**common_params, x_start=Lx/2 + 20, x_stop=Lx, direction='z')
+    timeAvgSA = params.TimeAvgSA(**common_params, x_start=Lx/2 + 20, x_stop=Lx, direction='x')
     
     magnonDispersion = params.MagnonDispersion(**common_params, component='y', axis='x', 
-                                               steadystate=1, triple=1)
+                                               steadystate=0, triple=0)
     
     magnonDispersionSinc = params.MagnonDispersionSinc(**common_params, component='y', axis='x')
     
@@ -77,9 +77,10 @@ def main():
     # plotting.plot_magnon_dispersion_triple(magnonDispersion, zoom=0, clim_max=1500)
     # plotting.plot_magnon_dispersion_double(magnonDispersion, zoom=0, sim_num=9)
     # plotting.plot_magnon_dispersion_separate(magnonDispersion, analytical=1)
-    plotting.plot_tAvg_SA(timeAvgSA)
-    # plotting.plot_magnon_dispersion(magnonDispersion,zoom=0)
+    # plotting.plot_tAvg_SA(timeAvgSA)
+    # plotting.plot_magnon_dispersion(magnonDispersion,zoom=0, clim_max=500, analytical=1)
     # plotting.plot_uniaxial_analytical_dispersion_width_modes(magnonDispersion)
+    # plotting.plot_critical_T(criticalT)
 
     ### Parallel computing needs this enabled ###
     # nsm = NSMultiClient(scriptserverports = range(1000,1002), cudaDevices = range(0,2))
