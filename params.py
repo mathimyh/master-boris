@@ -116,18 +116,20 @@ class MagnonDispersion(Params):
                 return [path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/dir' + self.component + '_axis' + self.axis + 'groundstate' + '_damping' + str(self.damping) + '_T' + str(self.T) +  '_dispersion.txt']
         else:
             if self.triple:
+                # Get values from the edges and middle of the systems(in y-direction)
+                n1, n2, n3 = self.cellsize, self.meshdims[1]/2, self.meshdims[1] - self.cellsize
                 if self.hard_axis:
-                    y1 = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/ycomponent_axis' + self.axis + f"_V{self.V:.3f}" + '_damping' + str(self.damping) + '_T' + str(self.T) + self.H_string + 'y=5_dispersion.txt'
-                    z1 = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/zcomponent_axis' + self.axis + f"_V{self.V:.3f}" + '_damping' + str(self.damping) + '_T' + str(self.T) + self.H_string +  'y=5_dispersion.txt'
-                    y2 = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/ycomponent_axis' + self.axis + f"_V{self.V:.3f}" + '_damping' + str(self.damping) + '_T' + str(self.T) + self.H_string + 'y=25_dispersion.txt'
-                    z2 = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/zcomponent_axis' + self.axis + f"_V{self.V:.3f}" + '_damping' + str(self.damping) + '_T' + str(self.T) + self.H_string +  'y=25_dispersion.txt'
-                    y3 = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/ycomponent_axis' + self.axis + f"_V{self.V:.3f}" + '_damping' + str(self.damping) + '_T' + str(self.T) + self.H_string + 'y=45_dispersion.txt'
-                    z3 = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/zcomponent_axis' + self.axis + f"_V{self.V:.3f}" + '_damping' + str(self.damping) + '_T' + str(self.T) + self.H_string +  'y=45_dispersion.txt'
+                    y1 = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/ycomponent_axis' + self.axis + f"_V{self.V:.3f}" + '_damping' + str(self.damping) + '_T' + str(self.T) + self.H_string + f'y={n1}_dispersion.txt'
+                    z1 = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/zcomponent_axis' + self.axis + f"_V{self.V:.3f}" + '_damping' + str(self.damping) + '_T' + str(self.T) + self.H_string +  f'y={n1}_dispersion.txt'
+                    y2 = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/ycomponent_axis' + self.axis + f"_V{self.V:.3f}" + '_damping' + str(self.damping) + '_T' + str(self.T) + self.H_string + f'y={n2}_dispersion.txt'
+                    z2 = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/zcomponent_axis' + self.axis + f"_V{self.V:.3f}" + '_damping' + str(self.damping) + '_T' + str(self.T) + self.H_string +  f'y={n2}_dispersion.txt'
+                    y3 = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/ycomponent_axis' + self.axis + f"_V{self.V:.3f}" + '_damping' + str(self.damping) + '_T' + str(self.T) + self.H_string + f'y={n3}_dispersion.txt'
+                    z3 = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/zcomponent_axis' + self.axis + f"_V{self.V:.3f}" + '_damping' + str(self.damping) + '_T' + str(self.T) + self.H_string +  f'y={n3}_dispersion.txt'
                     return [y1,z1,y2,z2,y3,z3]
                 else:
-                    one = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + 'dir' + self.component + '_axis' + self.axis + f"_V{self.V:.3f}" + '_damping' + str(self.damping) + '_T' + str(self.T) + '_y=5_dispersion.txt'
-                    two = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + 'dir' + self.component + '_axis' + self.axis + f"_V{self.V:.3f}" + '_damping' + str(self.damping) + '_T' + str(self.T) + '_y=25_dispersion.txt'
-                    three = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + 'dir' + self.component + '_axis' + self.axis + f"_V{self.V:.3f}" + '_damping' + str(self.damping) + '_T' + str(self.T) + '_y=45_dispersion.txt'
+                    one = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + 'dir' + self.component + '_axis' + self.axis + f"_V{self.V:.3f}" + '_damping' + str(self.damping) + '_T' + str(self.T) + f'_y={n1}_dispersion.txt'
+                    two = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + 'dir' + self.component + '_axis' + self.axis + f"_V{self.V:.3f}" + '_damping' + str(self.damping) + '_T' + str(self.T) + f'_y={n2}_dispersion.txt'
+                    three = path + self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + 'dir' + self.component + '_axis' + self.axis + f"_V{self.V:.3f}" + '_damping' + str(self.damping) + '_T' + str(self.T) + f'_y={n3}_dispersion.txt'
                     return [one,two,three]
             else:
                 if self.hard_axis:
@@ -143,21 +145,6 @@ class MagnonDispersion(Params):
             return path + self.type + '/' + self.modules_folder + self.ani + '/plots/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + 'dir' + self.component + '_axis' + self.axis + 'groundstate' + '_damping' + str(self.damping) + '_T' + str(self.T) + self.H_string + '_dispersion.png'
         else:
             return path + self.type + '/' + self.modules_folder + self.ani + '/plots/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/' + 'dir' + self.component + '_axis' + self.axis + f"_V{self.V:.3f}" + '_damping' + str(self.damping) + '_T' + str(self.T) + self.H_string + '_dispersion.png'
-
-class MagnonDispersionSinc(Params):
-
-    def __init__(self, meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, Hfield, component, axis):
-        super().__init__(meshdims, cellsize, t, V, damping, MEC, ani, T, type, hard_axis, Hfield)
-        self.component = component
-        self.axis = axis
-
-    def cachename(self):
-        y = self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/sinc_ycomponent_axis' + self.axis + '_damping' + str(self.damping) + '_dispersion.txt'
-        z = self.type + '/' + self.modules_folder + self.ani + '/cache/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/sinc_zcomponent_axis' + self.axis + '_damping' + str(self.damping) + '_dispersion.txt'
-        return [y,z]
-
-    def plotname(self):
-        return path + self.type + '/' + self.modules_folder + self.ani + '/plots/dispersions/' + str(self.meshdims[0]) + 'x' + str(self.meshdims[1]) + 'x' + str(self.meshdims[2]) +  '/sinc_axis' + self.axis + '_damping' + str(self.damping) +  '_dispersion.png'
 
 class CriticalT(Params):
 
