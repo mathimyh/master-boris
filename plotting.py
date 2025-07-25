@@ -2603,7 +2603,7 @@ def plot_data_with_fitted_functions(plots, ani, thickness):
                     #     plt.savefig('AFM/custom/plots/function_fit_uniaxial_2layer_constJc_over_d.png', dpi=300)
                     #     plt.show()
 
-def exponential_diffusion_length(cachename, ani='IP'):
+def exponential_diffusion_length(cachename, ani='IP', plot=False):
     
     '''
     
@@ -2636,6 +2636,8 @@ def exponential_diffusion_length(cachename, ani='IP'):
         fit_signal = [y + abs(min_signal) for y in signal]
         fit_signal = np.array([np.log(p) for p in fit_signal])
         
+        plot_signal = copy.deepcopy(fit_signal)
+        
         # This is the data set we use for determining the cut-off
         cutoff_signal = np.array([np.log(p) for p in signal])
         cutoff_signal  = cutoff_signal[np.isfinite(cutoff_signal)]
@@ -2659,9 +2661,16 @@ def exponential_diffusion_length(cachename, ani='IP'):
             
             diffusion_length = 1/params[1]
             
+            if plot:
+                
+                plt.plot(xs+3.02, np.array(plot_signal), color="#e76f8a", linewidth=2, marker='s', markevery=range(0, 310,30))
+                plt.plot(fit_xs+3.02, np.array(f(fit_xs, params[0], params[1])), color="#4575b4", linewidth=2)
+            
+                plt.show()
+            
             return diffusion_length, params 
 
-def harmonic_diffusion_length(cachename, guess=[6e11, 2, 0.5e11, 2*np.pi/0.07, 0, 1/0.2], ani='IP'):
+def harmonic_diffusion_length(cachename, guess=[6e11, 2, 0.5e11, 2*np.pi/0.07, 0, 1/0.2], ani='IP', plot=False):
     
     '''
     
@@ -2695,7 +2704,7 @@ def harmonic_diffusion_length(cachename, guess=[6e11, 2, 0.5e11, 2*np.pi/0.07, 0
         cutoff_signal = np.array([np.log(p) for p in signal])
         cutoff_signal  = cutoff_signal[np.isfinite(cutoff_signal)]
         
-        xs = np.linspace(0, 2.98, len(fit_signal))
+        xs = np.linspace(0, 2.98, len(signal))
             
         # Find the cut-off before fitting the function
         algo = rpt.Dynp(model="l2").fit(cutoff_signal)
@@ -2713,6 +2722,13 @@ def harmonic_diffusion_length(cachename, guess=[6e11, 2, 0.5e11, 2*np.pi/0.07, 0
             params, params_cov = curve_fit(g, fit_xs, fit_signal, p0=guess)
             
             diffusion_length = 1/params[1]
+            
+            if plot:
+                
+                plt.plot(xs+3.02, np.array(signal)/1e11, color="#e76f8a", linewidth=2, marker='s', markevery=[0, 2, 5, 8, 13, 20, 27, 37, 42, 48,58])
+                plt.plot(fit_xs+3.02, np.array(g(fit_xs, *params))/1e11, color="#4575b4", linewidth=2)
+
+                plt.show()
             
             return diffusion_length, params
 
@@ -3103,6 +3119,11 @@ def main():
     
     # both_systems_across_voltages(10)
     
+    exp_file = 'AFM/ex+ani/IP/cache/t_avg/6000x5x10/tAvg_damping0.0004_V-0.020_0.3K.txt'
+    harm_file = 'AFM/ex+ani/IP\cache/t_avg/6000x5x40/tAvg_damping0.0004_V-0.080_0.3K.txt'
+    
+    # exponential_diffusion_length(exp_file, plot=1)
+    harmonic_diffusion_length(harm_file, plot=1)
 
 if __name__ == '__main__':
     main()
