@@ -18,6 +18,36 @@ plt.rcParams.update({'font.size': 26})
 
 #### MAGNON TRANSPORT PLOTS ###
 
+def extract_vals_from_file(f, ani):
+    
+    lines = f.readlines()
+    lines = lines[10:]
+
+    vals = []
+
+    for i in range(len(lines)):
+        vec1 = lines[i].split('\t')
+        all_vals = vec1[1:]
+        ani_int = 0
+        if ani == 'OOP':
+            ani_int = 2
+        temp = []
+        while ani_int < len(all_vals):
+            temp.append(float(all_vals[ani_int]))
+            ani_int += 3
+        vals.append(temp)
+
+    ys = []
+
+    for i in range(len(vals[0])):
+        val = 0
+        for j in range(len(vals)):
+            val += float(vals[j][i])
+        val /= len(vals)
+        ys.append(val)
+        
+    return ys
+             
 def plot_plateau(steadystate):
 
     '''
@@ -1668,43 +1698,7 @@ def plot_dispersions(plots, savename):
 
     plt.show()
 
-#### MISCELLANEOUS ####
-
-def plot_critical_T(criticalT):
-
-    plt.figure(figsize=(10,6))
-
-    output_file = criticalT.cachename()
-
-    f = open(output_file, 'r')
-
-    lines = f.readlines()
-
-    xs = []
-    ys = []
-    
-
-    for i, line in enumerate(lines):
-        temp = line[1:-2]
-        vals = temp.strip().split(', ')
-        T = int(vals[0])
-        m = float(vals[1])
-        xs.append(T)
-        ys.append(m)
-        
-    ys = [abs(y) for y in ys]
-    max_y = max(ys)
-    ys = [y/max_y for y in ys]
-
-    plt.plot(xs, ys, linewidth=3)
-
-    savename = criticalT.plotname()
-    params.make_folder(savename)
-    plt.xlabel(r'Temperature (K)')
-    plt.ylabel(r'|${{m}}_{A, x}$|')
-    plt.tight_layout()
-    plt.savefig(savename, dpi=300)
-    plt.show()
+#### DIFFUSION LENGTHS ####
 
 def plot_diffusion_length_all_systems(all_plots, all_ts, savename, ani):
     '''
@@ -1834,177 +1828,6 @@ def plot_diffusion_length_all_systems(all_plots, all_ts, savename, ani):
     plt.show()
     
 def plot_diffusion_length_both_systems(plots1, plots2, ts, savename, ani, thickness):
-    
-    '''
-    
-    Plots the spin diffusion lengths of given magnon transport simulations (two systems in the same plot). 
-    ts are the values that is compared between them
-    
-    '''
-    
-    
-    plt.figure(figsize=(10,7))
-    
-    both = [plots1, plots2]
-    markers = ['s', 'v']
-    colors = ['#1B9E77', '#D95F02']
-
-    flips_2layer = {0.0875 : [], 0.100 : [4,5,6,7,9], 0.125 : [3,4,6,7,9], 0.1375: [1,2,3,4,5,7,8],
-                    0.1625 : [2,3,5,6,7,8], 0.175 : [2,4,6,7,8], 0.200 : [1,2,3,4,5,6,7,9],
-                    0.2125 : [1,2,3,4,5,6,7,8], 0.2375 : [1,2,3,4,5,6,7,8,9], 
-                    0.250 : [1,2,3,4,5,6,7,8,9], 0.275 : [1,5,6,9], 0.2875 : [2,7,9]}
-
-    ensembles = 9
-    
-    # Loop over biaxial and uniaxial
-    for m, plots in enumerate(both):    
-            
-        # Loop over voltages
-        for k, raw_plot in enumerate(plots):
-
-            results = []
-            
-            failed = False
-
-            # Loop over ensembles
-            for e in range(1,ensembles+1):
-
-                # For now only 4 layers have many ensembles, update when sims are done for the rest
-                if ensembles == 1:
-                    plot = raw_plot
-                else:
-                    plot = raw_plot[:-4]
-                    plot += '_sim' + str(e) + '.txt' 
-                
-                try:
-                    f = open(plot, 'r')
-                except:
-                    print('No file found', plot)
-                else:
-                    plat = plot.split('/')[-1]
-                    temps = plat.split('_')
-                    temp = temps[2]
-
-                    lines = f.readlines()
-                    lines = lines[10:]
-
-                    vals = []
-
-                    for i in range(len(lines)):
-                        vec1 = lines[i].split('\t')
-                        all_vals = vec1[1:]
-                        ani_int = 0
-                        if ani == 'OOP':
-                            ani_int = 2
-                        temp = []
-                        while ani_int < len(all_vals):
-                            temp.append(float(all_vals[ani_int]))
-                            ani_int += 3
-                        vals.append(temp)
-
-                    ys = []
-
-                    for i in range(len(vals[0])):
-                        val = 0
-                        for j in range(len(vals)):
-                            val += float(vals[j][i])
-                        val /= len(vals)
-                        ys.append(val)
-
-
-                    # We need to find only the data in the exponential decay using a cut-off
-                    # Then we fit this data to a function
-                    # Either linear for exponential decay, or exponential with harmonic wave for
-                    # resonance plots
-                    try: 
-                        min_y = min(ys)
-                    except ValueError:
-                        print('min(ys) is empty for V = ', -ts[k])
-                        failed = True
-                    else:
-                        
-                        original_ys = copy.deepcopy(ys)
-                        
-                        # This is the data set we use for curve fitting
-                        fit_ys = [y + abs(min_y) for y in ys]
-                        fit_ys = np.array([np.log(p) for p in fit_ys])
-                        
-                        # This is the data set we use for determining the cut-off
-                        cutoff_ys = np.array([np.log(p) for p in ys])
-                        cutoff_ys  = cutoff_ys[np.isfinite(cutoff_ys)]
-                        
-                        xs = np.linspace(0, 2.98, len(fit_ys))
-                            
-                        # Find the cut-off before fitting the function
-                        algo = rpt.Dynp(model="l2").fit(cutoff_ys)
-                        try:
-                            result = algo.predict(n_bkps=1)
-                        except:
-                            print('Data was too noisy for V = ', -ts[k])
-                            failed = True
-                        else:
-
-                            # Then cut off the list ands create new x-values list
-                            # One for linear and one for exponential function fitting
-                            lin_fit_ys = fit_ys[:result[0]]
-                            exp_fit_ys = original_ys[:result[0]]
-                            fit_xs = xs[:result[0]]
-
-                            # Linear
-                            def f(x, a, b):
-                                return a - b*x   
-                            
-                            # Exponential with harmonic wave
-                            def g(x, a, b, c, d, e, f):
-                                return a*np.exp(-b*x) + c*np.sin(d*x + e)*np.exp(-f*x)
-                            
-                            # Exponential
-                            def h(x, a, b):
-                                return a*np.exp(-b*x)
-                            
-                            
-                            if thickness == 40:
-                                try:
-                                    params, params_cov = curve_fit(g, fit_xs, exp_fit_ys, p0=[1e12, 2, 5e11, 20, 0, 4])
-                                except TypeError:
-                                    print('Could not find curve for this voltage')
-                                
-                                # If we get runtime error then there is no harmonic wave, just exponential decay
-                                except RuntimeError:
-                                    params, params_cov = curve_fit(h, fit_xs, lin_fit_ys, p0=[1e12, 2])
-                                    if 1/params[1] < 2:
-                                        results.append(1/params[1])
-                                else:
-                                    results.append(1/params[1])
-                            else:
-                                params, params_cov = curve_fit(f, fit_xs, lin_fit_ys)
-                                if thickness != 10 or (e not in flips_2layer[ts[k]] or m == 0):
-                                    results.append(1/params[1])
-                                    
-            array = np.array([x for x in results if 0 <= x < 1])
-            standard_deviation = np.std(array)
-            average = np.average(array)
-            if average < 1: 
-                plt.errorbar([1e3*ts[k]/thickness], average, yerr=standard_deviation, marker=markers[m], markersize=10, color=colors[m], capsize=3)
-            
-    plt.xlabel(r'Voltage/thickness (μV/nm)')
-    plt.ylabel(r'$L_D (μm)$')
-    
-    
-    green_square = mlines.Line2D([], [], color=colors[0], marker=markers[0], linestyle='None',
-                          markersize=10, label='Uniaxial system')
-    orange_triangle = mlines.Line2D([], [], color=colors[1], marker=markers[1], linestyle='None',
-                          markersize=10, label='Biaxial system')
-    
-    plt.legend(handles=[green_square, orange_triangle])
-    
-    plt.tight_layout()
-    plt.savefig(savename, dpi=300)
-    
-
-    plt.show()
-
-def plot_diffusion_length_both_systems2(plots1, plots2, ts, savename, ani, thickness):
     
     '''
     
@@ -2779,6 +2602,157 @@ def plot_data_with_fitted_functions(plots, ani, thickness):
                     #     plt.tight_layout()
                     #     plt.savefig('AFM/custom/plots/function_fit_uniaxial_2layer_constJc_over_d.png', dpi=300)
                     #     plt.show()
+
+def exponential_diffusion_length(cachename, ani='IP'):
+    
+    '''
+    
+    Find the diffusion length for the spin accumulation signal in the system given by cachename, by 
+    fitting the logarithm of the data to a function using scipy.optimize.
+    This function uses a linear function to describe the logarithm of the signal, so should only be used
+    for systems that do not exhibit harmonic oscillations.
+    ani is the anisotropy and is set to IP as a standard
+    
+    Returns the diffusion length and a list of all the fitted variables.
+    
+    '''
+    
+    try:
+        f = open(cachename, 'r')
+    except:
+        print('No file found')
+    else:
+    
+        # Get the signal from the file
+        signal = extract_vals_from_file(f, ani)
+    
+        # Define the linear function to fit
+        def f(x, a, b):
+            return a - b*x  
+        
+        min_signal = min(signal)
+    
+        # This is the data set we use for curve fitting
+        fit_signal = [y + abs(min_signal) for y in signal]
+        fit_signal = np.array([np.log(p) for p in fit_signal])
+        
+        # This is the data set we use for determining the cut-off
+        cutoff_signal = np.array([np.log(p) for p in signal])
+        cutoff_signal  = cutoff_signal[np.isfinite(cutoff_signal)]
+        
+        xs = np.linspace(0, 2.98, len(fit_signal))
+            
+        # Find the cut-off before fitting the function
+        algo = rpt.Dynp(model="l2").fit(cutoff_signal)
+        try:
+            cutoff = algo.predict(n_bkps=1)
+        except:
+            print('Data was too noisy')
+        else:
+            # Now slice the signal to only include the data before the cut-off
+            # Only this data will be fitted, the rest is a flat line
+            fit_signal = fit_signal[:cutoff[0]]
+            fit_xs = xs[:cutoff[0]]
+            
+            # Fit the signal
+            params, params_cov = curve_fit(f, fit_xs, fit_signal)
+            
+            diffusion_length = 1/params[1]
+            
+            return diffusion_length, params 
+
+def harmonic_diffusion_length(cachename, guess=[6e11, 2, 0.5e11, 2*np.pi/0.07, 0, 1/0.2], ani='IP'):
+    
+    '''
+    
+    Find the diffusion length for the spin accumulation signal in the system given by cachename, 
+    by fitting the data to a function using scipy.optimize. This function uses two exponential terms 
+    to describe the signal, where one of the terms also includes a harmonic behavior.
+    This function should be used for systems where harmonic oscillations are observed.
+    ani is the anisotropy and is set to IP as a standard
+    
+    A standard guess of the variables is included, but it might be necessary to change some elements
+    when fitting some systems.
+    
+    Returns the diffusion length and a list of the fitted variables
+    
+    '''
+    
+    try:
+        f = open(cachename, 'r')
+    except:
+        print('No file found')
+    else:
+    
+        # Get the signal from the file
+        signal = extract_vals_from_file(f, ani)
+    
+        # Define the exponential function with harmonic wave
+        def g(x, a, b, c, d, e, f):
+            return a*np.exp(-b*x) + c*np.sin(d*x + e)*np.exp(-f*x)
+    
+        # This is the data set we use for determining the cut-off
+        cutoff_signal = np.array([np.log(p) for p in signal])
+        cutoff_signal  = cutoff_signal[np.isfinite(cutoff_signal)]
+        
+        xs = np.linspace(0, 2.98, len(fit_signal))
+            
+        # Find the cut-off before fitting the function
+        algo = rpt.Dynp(model="l2").fit(cutoff_signal)
+        try:
+            cutoff = algo.predict(n_bkps=1)
+        except:
+            print('Data was too noisy')
+        else:
+            # Now slice the signal to only include the data before the cut-off
+            # Only this data will be fitted, the rest is a flat line
+            fit_signal = signal[:cutoff[0]]
+            fit_xs = xs[:cutoff[0]]
+            
+            # Fit the signal.
+            params, params_cov = curve_fit(g, fit_xs, fit_signal, p0=guess)
+            
+            diffusion_length = 1/params[1]
+            
+            return diffusion_length, params
+
+#### MISCELLANEOUS ####
+
+def plot_critical_T(criticalT):
+
+    plt.figure(figsize=(10,6))
+
+    output_file = criticalT.cachename()
+
+    f = open(output_file, 'r')
+
+    lines = f.readlines()
+
+    xs = []
+    ys = []
+    
+
+    for i, line in enumerate(lines):
+        temp = line[1:-2]
+        vals = temp.strip().split(', ')
+        T = int(vals[0])
+        m = float(vals[1])
+        xs.append(T)
+        ys.append(m)
+        
+    ys = [abs(y) for y in ys]
+    max_y = max(ys)
+    ys = [y/max_y for y in ys]
+
+    plt.plot(xs, ys, linewidth=3)
+
+    savename = criticalT.plotname()
+    params.make_folder(savename)
+    plt.xlabel(r'Temperature (K)')
+    plt.ylabel(r'|${{m}}_{A, x}$|')
+    plt.tight_layout()
+    plt.savefig(savename, dpi=300)
+    plt.show()
 
 def plot_uniaxial_analytical_dispersion():
     
