@@ -2732,6 +2732,51 @@ def harmonic_diffusion_length(cachename, guess=[6e11, 2, 0.5e11, 2*np.pi/0.07, 0
             
             return diffusion_length, params
 
+def signal_strength_over_voltage(cachenames, voltages, position, ani, thickness):
+    
+    '''
+    
+    Very specific function for plotting the signal strength mu at a given position for different voltages
+    Cachenames given as a list of tuples where uniax is the first and biax file is the second
+    
+    '''
+    
+    biax_color = '#D95F02'
+    biax_marker = 'v'
+    uniax_color = '#1B9E77'
+    uniax_marker = 's'
+    
+    plt.figure()
+    
+    for cachename, voltage in zip(cachenames, voltages):
+        try:
+            f0 = open(cachename[0], 'r')
+        except FileNotFoundError:
+            new0 = cachename[0][:-4] + '_sim1.txt'
+            f0 = open(new0, 'r')
+        try:
+            f1 = open(cachename[1], 'r')
+        except FileNotFoundError:
+            new1 = cachename[1][:-4] + '_sim1.txt'
+            f1 = open(new1, 'r')
+        ys0 = extract_vals_from_file(f0, ani)
+        ys1 = extract_vals_from_file(f1, ani)
+        
+        index = int(position/3)
+        
+        
+        plt.plot(1e3*voltage/thickness, ys0[index]/1e11, color=uniax_color, marker=uniax_marker)
+        plt.plot(1e3*voltage/thickness, ys1[index]/1e11, color=biax_color, marker=biax_marker)
+    
+    plt.xticks([10,15,20,25])
+    
+    plt.ylabel(r'$\mu$(x=3.2μm)')
+    plt.xlabel(r'Voltage/thickness (μV/nm)')
+    plt.tight_layout()
+    plt.show()
+    
+    
+
 #### MISCELLANEOUS ####
 
 def plot_critical_T(criticalT):
@@ -3115,15 +3160,25 @@ def main():
             
         savename_both = f'AFM/custom/plots/voltage_dependence_diffusion_lengths_{int(thickness/5)}layer.png'
         
-        plot_diffusion_length_both_systems(fs1, fs2, ts, savename_both, 'IP', thickness)
+        # plot_diffusion_length_both_systems(fs1, fs2, ts, savename_both, 'IP', thickness)
+        
+        # Plot only the value at a given position
     
-    # both_systems_across_voltages(10)
+        
+        listy = list(zip(fs1, fs2))
+        
+        fixed = [V*factor for V in Vs]
+        
+        
+        signal_strength_over_voltage(listy, fixed, 3.2, 'IP', thickness)
+    
+    both_systems_across_voltages(40)
     
     exp_file = 'AFM/ex+ani/IP/cache/t_avg/6000x5x10/tAvg_damping0.0004_V-0.020_0.3K.txt'
     harm_file = 'AFM/ex+ani/IP\cache/t_avg/6000x5x40/tAvg_damping0.0004_V-0.080_0.3K.txt'
     
     # exponential_diffusion_length(exp_file, plot=1)
-    harmonic_diffusion_length(harm_file, plot=1)
+    # harmonic_diffusion_length(harm_file, plot=1)
 
 if __name__ == '__main__':
     main()
