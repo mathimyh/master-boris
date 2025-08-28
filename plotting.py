@@ -224,7 +224,7 @@ def plot_tAvg_SA_both_systems(timeAvgSA, sim_num=False, show_plot=False):
     '''
     
     The standard function for plotting <mxdmdt> over distance in magnon transport simulations. 
-    Plots both biaxial and uniaxial systems together in the same plot for a given timeAvgSA object
+    Plots both biaxial and Easy-axis phases together in the same plot for a given timeAvgSA object
 
     '''
 
@@ -371,7 +371,7 @@ def plot_tAvg_SA_both_systems(timeAvgSA, sim_num=False, show_plot=False):
         
     plt.ylabel(r'$\mu$')
     
-    plt.legend(['Uniaxial system', 'Biaxial system'])    
+    plt.legend(['Easy-axis phase', 'Easy-plane phase'])    
     
     plt.tight_layout()
         
@@ -546,17 +546,21 @@ def plot_tAvg_comparison_with_reference(plots, legends, savename, ani):
     plt.savefig(savename, dpi=300)
     plt.show()
 
-def plot_tAvg_comparison(plots, legends, savename, ani):
+def plot_tAvg_comparison(plots, legends, savename, ani, inset):
 
     '''
     
     Plots several systems in the same plot for comparisons
     Files given as a list in 'plots' together with legends and a savename
+    Can have a axins inset given by the bool 'inset'
     
     '''
 
-    plt.figure(figsize=(12,7.5))
-    # plt.figure(figsize=(10, 6))
+    if inset:
+        plt.figure(figsize=(10, 6))
+    else:
+        plt.figure(figsize=(12,7.5))
+        
     ax = plt.subplot(111)
 
     N = len(plots)
@@ -614,21 +618,21 @@ def plot_tAvg_comparison(plots, legends, savename, ani):
     # colors = get_lab_ramp(green_color, N)
     # colors = generate_hue_variants(green_color, N)
     
-    
-    x0 = 0.5
-    y0 = 0.3
-    dx = 0.2
-    dy = 0.33
-    
-    w = 0.2
-    h = 0.33
-    
-    # x1, x2, y1, y2 = 3.1 , 3.43, 0.0 , 0.33
-    # axins = ax.inset_axes(
-    #     [x0, y0, w*2, h*2],
-    #     xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
-    # ax.indicate_inset_zoom(axins, edgecolor='black')
-    # axins.set_yticks([])
+    if inset:
+        x0 = 0.5
+        y0 = 0.3
+        dx = 0.2
+        dy = 0.33
+        
+        w = 0.2
+        h = 0.33
+        
+        x1, x2, y1, y2 = 0.1 , 0.43, 0.0 , 0.33
+        axins = ax.inset_axes(
+            [x0, y0, w*2, h*2],
+            xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
+        ax.indicate_inset_zoom(axins, edgecolor='black')
+        axins.set_yticks([])
 
 
     for k, plot in enumerate(plots):
@@ -685,7 +689,7 @@ def plot_tAvg_comparison(plots, legends, savename, ani):
         leg = round(ys[0] * 1e-11, 1)
 
         ys = [(y )/ys[0] for y in ys]
-        xs = np.linspace(3.02, 6, len(ys))
+        xs = np.linspace(0, 2.98, len(ys))
 
         # if k == 0:
         linestyle = 'solid'
@@ -695,48 +699,45 @@ def plot_tAvg_comparison(plots, legends, savename, ani):
         ax.plot(xs, ys, label=legends[k], linewidth=3, color=colors[k], linestyle=linestyle)
         # plt.plot(xs, ys, label=str(leg), linewidth=3, color=colors[k])
         
+        if inset:
         
-        # if k == 4:
-        #     x1, x2, y1, y2 = 3.1 , 3.43, 0.0 , 0.33
-        #     axins = ax.inset_axes(
-        #         [x0, y0+dy, w, h],
-        #         xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
-            
-        # elif k == 5:
-        #     x1, x2, y1, y2 = 3.1 , 3.43, 0.0 , 0.33
-        #     axins = ax.inset_axes(
-        #         [x0+dx, y0+dy, w, h],
-        #         xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
-            
-        # elif k == 6:
-        #     x1, x2, y1, y2 = 3.1 , 3.43, 0.0 , 0.33
-        #     axins = ax.inset_axes(
-        #         [x0, y0, w, h],
-        #         xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
-            
-        # elif k == 7:
-        #     x1, x2, y1, y2 = 3.1 , 3.43, 0.0 , 0.33
-        #     axins = ax.inset_axes(
-        #         [x0+dx, y0, w, h],
-        #         xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
+            if k == 4:
+                x1, x2, y1, y2 = 0.1 , 0.43, 0.0 , 0.33
+                axins = ax.inset_axes(
+                    [x0, y0+dy, w, h],
+                    xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
+                
+            elif k == 5:
+                x1, x2, y1, y2 = 0.1 , 0.43, 0.0 , 0.33
+                axins = ax.inset_axes(
+                    [x0+dx, y0+dy, w, h],
+                    xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
+                
+            elif k == 6:
+                x1, x2, y1, y2 = 0.1 , 0.43, 0.0 , 0.33
+                axins = ax.inset_axes(
+                    [x0, y0, w, h],
+                    xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
+                
+            elif k == 7:
+                x1, x2, y1, y2 = 0.1 , 0.43, 0.0 , 0.33
+                axins = ax.inset_axes(
+                    [x0+dx, y0, w, h],
+                    xlim=(x1,x2), ylim=(y1,y2), xticklabels=[])
         
 
-        # if k > 3:
-        #     axins.plot(xs, ys, color=colors[k], linewidth=3)
-            
-        #     axins.set_yticks([])
+            if k > 3:
+                axins.plot(xs, ys, color=colors[k], linewidth=3)
+                axins.set_yticks([])
 
     plt.xlabel('x (μm)')
     plt.ylabel(r'$\mu$/$\mu_0$')
     
-    
-
-    
-
-    # plt.legend(title= r'$\mu$ value underneath injector ($10^{11}$)')
-    # ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), title=r'$L_y$ (nm)')
-    
-    ax.legend(title=r'Thickness (layers)')
+    if inset:
+        plt.legend(title= r'$\mu$ value underneath injector ($10^{11}$)')
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), title=r'$L_y$ (nm)')
+    else:
+        ax.legend(title=r'Thickness (layers)')
 
     plt.tight_layout()
     plt.savefig(savename, dpi=300)
@@ -1540,7 +1541,7 @@ def plot_dispersion_field_comparisons(plots, c_max1, c_max2):
     '''
     
     Plots several magnon dispersion relations in the same figure (subplots). 
-    This is a specific function for comparison of external magnetic field in the biaxial system. 
+    This is a specific function for comparison of external magnetic field in the Easy-plane phase. 
     
     '''
 
@@ -1810,7 +1811,7 @@ def plot_diffusion_length_all_systems(all_plots, all_ts, savename, ani):
     handles = []
     
     aniuni_2_layer = mlines.Line2D([], [], color=colors[0], marker=markers[0], linestyle='None',
-                          markersize=10, label='Uniaxial system')
+                          markersize=10, label='Easy-axis phase')
     
     labels = ['2 layer', '4 layer', '8 layer', '2 layer', '4 layer', '8 layer']
     
@@ -1986,9 +1987,9 @@ def plot_diffusion_length_both_systems(plots1, plots2, ts, savename, ani, thickn
     
     
     green_square = mlines.Line2D([], [], color=colors[0], marker=markers[0], linestyle='None',
-                          markersize=10, label='Uniaxial system')
+                          markersize=10, label='Easy-axis phase')
     orange_triangle = mlines.Line2D([], [], color=colors[1], marker=markers[1], linestyle='None',
-                          markersize=10, label='Biaxial system')
+                          markersize=10, label='Easy-plane phase')
     
     plt.legend(handles=[green_square, orange_triangle])
     
@@ -2260,9 +2261,9 @@ def plot_diffusion_length_across_thicknesses(plots, ts, savename, ani):
     plt.xticks([1,2,3,4,5,6,7,8])
     
     green_square = mlines.Line2D([], [], color=uniax_color, marker=uniax_marker, linestyle='None',
-                          markersize=10, label='Uniaxial system')
+                          markersize=10, label='Easy-axis phase')
     orange_triangle = mlines.Line2D([], [], color=biax_color, marker=biax_marker, linestyle='None',
-                          markersize=10, label='Biaxial system')
+                          markersize=10, label='Easy-plane phase')
     
     plt.legend(handles=[green_square, orange_triangle])
 
@@ -2746,33 +2747,56 @@ def signal_strength_over_voltage(cachenames, voltages, position, ani, thickness)
     uniax_color = '#1B9E77'
     uniax_marker = 's'
     
-    plt.figure()
+    colors = [uniax_color, biax_color]
+    markers = [uniax_marker, biax_marker]
+    
+    index = (position-3)/3
+    
+    plt.figure(figsize=(10, 6))
     
     for cachename, voltage in zip(cachenames, voltages):
-        try:
-            f0 = open(cachename[0], 'r')
-        except FileNotFoundError:
-            new0 = cachename[0][:-4] + '_sim1.txt'
-            f0 = open(new0, 'r')
-        try:
-            f1 = open(cachename[1], 'r')
-        except FileNotFoundError:
-            new1 = cachename[1][:-4] + '_sim1.txt'
-            f1 = open(new1, 'r')
-        ys0 = extract_vals_from_file(f0, ani)
-        ys1 = extract_vals_from_file(f1, ani)
         
-        index = int(position/3)
+        for an in range(2):
         
+            ys = []
         
-        plt.plot(1e3*voltage/thickness, ys0[index]/1e11, color=uniax_color, marker=uniax_marker)
-        plt.plot(1e3*voltage/thickness, ys1[index]/1e11, color=biax_color, marker=biax_marker)
+            for i in range(1,10):
+                try:
+                    new = cachename[an][:-4] + f'_sim{i}.txt'
+                    f = open(new, 'r')
+                except FileNotFoundError:
+                    print(f'No file for path: {f}')
+                else:
+                    y = extract_vals_from_file(f, ani)
+                    ys.append(y[int(index*len(y))])
+                    
+            arr = np.array(ys)
+            
+            
+            av = np.average(arr)
+            std = np.std(arr)
+        
+            plt.errorbar([1e3*voltage/thickness], av/1e11, yerr=std/1e11, color=colors[an], marker=markers[an], markersize=10, capsize=3)
     
     plt.xticks([10,15,20,25])
     
-    plt.ylabel(r'$\mu$(x=3.2μm)')
+    plt.ylabel(r'$\mu$(x=0.2μm)')
     plt.xlabel(r'Voltage/thickness (μV/nm)')
+    
+    green_square = mlines.Line2D([], [], color=colors[0], marker=markers[0], linestyle='None',
+                          markersize=10, label='Easy-axis phase')
+    orange_triangle = mlines.Line2D([], [], color=colors[1], marker=markers[1], linestyle='None',
+                          markersize=10, label='Easy-plane phase')
+    
+    plt.legend(handles=[green_square, orange_triangle], loc='upper left')
+    
+    # plt.title(f'{thickness} layer thickness')
+    
     plt.tight_layout()
+    
+    savename = f'AFM/custom/plots/signal_strength_over_voltage_{thickness}_layers.png'
+    
+    plt.savefig(savename, dpi=300)
     plt.show()
     
     
@@ -2979,7 +3003,7 @@ def main():
 
     # width_comparison(40)
 
-    def thickness_comparison(hard_axis, V0):
+    def thickness_comparison(hard_axis, V0, inset):
 
 
         Vs = []
@@ -2998,12 +3022,16 @@ def main():
         for V, t in zip(Vs, ts):
             f = 'AFM/ex+ani' + hard_axis_str + f'/IP/cache/t_avg/6000x50x{t*5}/tAvg_damping0.0004_V{V:.3f}_0.3K.txt'
             fs.append(f)
+            
+        inset_string = ''
+        if not inset:
+            inset_string = '_no_inset'
 
-        savename = 'AFM/custom/plots/' + system + f'_mxdmdt_over_thicknesses_V0={V0}_no_inset.png'
+        savename = 'AFM/custom/plots/' + system + f'_mxdmdt_over_thicknesses_V0={V0}' + inset_string + '.png'
 
-        plot_tAvg_comparison(fs, ts, savename, 'IP')
+        plot_tAvg_comparison(fs, ts, savename, 'IP', inset)
 
-    # thickness_comparison(1, -0.06)
+    thickness_comparison(0, -0.06, 1)
     
     ### Very thick meshes
     
@@ -3079,9 +3107,9 @@ def main():
                 
         savename_thickness = f'AFM/custom/plots/diffusion_length_across_thicknesses_V0={V0:.3f}.png'
         
-        # plot_diffusion_length_across_thicknesses(fs, thicknesses, savename_thickness, 'IP')
+        plot_diffusion_length_across_thicknesses(fs, thicknesses, savename_thickness, 'IP')
         # plot_cut_offs(fs, thicknesses, 'IP')
-        plot_data_with_fitted_functions(fs, 'IP', 0)
+        # plot_data_with_fitted_functions(fs, 'IP', 0)
     
     # const_Jc_over_d()
     
@@ -3160,7 +3188,7 @@ def main():
             
         savename_both = f'AFM/custom/plots/voltage_dependence_diffusion_lengths_{int(thickness/5)}layer.png'
         
-        # plot_diffusion_length_both_systems(fs1, fs2, ts, savename_both, 'IP', thickness)
+        plot_diffusion_length_both_systems(fs1, fs2, ts, savename_both, 'IP', thickness)
         
         # Plot only the value at a given position
     
@@ -3170,9 +3198,9 @@ def main():
         fixed = [V*factor for V in Vs]
         
         
-        signal_strength_over_voltage(listy, fixed, 3.2, 'IP', thickness)
+        # signal_strength_over_voltage(listy, fixed, 3.2, 'IP', thickness)
     
-    both_systems_across_voltages(40)
+    # both_systems_across_voltages(40)
     
     exp_file = 'AFM/ex+ani/IP/cache/t_avg/6000x5x10/tAvg_damping0.0004_V-0.020_0.3K.txt'
     harm_file = 'AFM/ex+ani/IP\cache/t_avg/6000x5x40/tAvg_damping0.0004_V-0.080_0.3K.txt'
