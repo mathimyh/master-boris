@@ -306,15 +306,16 @@ def current_density(ns, currentDensity):
 
     M = virtual_current(ns, currentDensity)
 
+    meshdims = currentDensity.meshdims
 
     output_file = currentDensity.cachename()
     print(output_file)
     params.make_folder(output_file)
 
     # See if there is difference in spin current within the injector. Shouldnt be
-    one = np.array([currentDensity.meshdims[0]/2 - 20, 0, currentDensity.meshdims[2], currentDensity.meshdims[0]-20, currentDensity.meshdims[1], currentDensity.meshdims[2]])*1e-9
-    two = np.array([currentDensity.meshdims[0]/2 - 20, 0, currentDensity.meshdims[2], currentDensity.meshdims[0]-20, currentDensity.meshdims[1], currentDensity.meshdims[2]])*1e-9
-    three = np.array([currentDensity.meshdims[0]/2 - 20, 0, currentDensity.meshdims[2], currentDensity.meshdims[0]-20, currentDensity.meshdims[1], currentDensity.meshdims[2]])*1e-9
+    one = np.array([meshdims[0]/2 - 20, 0, meshdims[2], meshdims[0]-20, meshdims[1], meshdims[2]])*1e-9
+    two = np.array([meshdims[0]/2 - 20, 0, meshdims[2], meshdims[0]-20, meshdims[1], meshdims[2]])*1e-9
+    three = np.array([meshdims[0]/2 - 20, 0, meshdims[2], meshdims[0]-20, meshdims[1], meshdims[2]])*1e-9
         
     ns.setsavedata(output_file, ['<Jc>', M, one], ['<Jc>', M, two], ['<Jc>', M, three])
 
